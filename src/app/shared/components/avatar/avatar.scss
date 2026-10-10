@@ -1,0 +1,36 @@
+:host {
+  --avatar-size: 2.25rem;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: calc(var(--avatar-size) * 0.38);
+  letter-spacing: 0.02em;
+  user-select: none;
+  background: hsl(var(--avatar-h) 75% 92%);
+  color: hsl(var(--avatar-h) 55% 32%);
+}
+
+:host-context([data-bs-theme='dark']) {
+  background: hsl(var(--avatar-h) 35% 24%);
+  color: hsl(var(--avatar-h) 80% 82%);
+}
+
+:host(.avatar-xs) {
+  --avatar-size: 1.5rem;
+}
+
+:host(.avatar-sm) {
+  --avatar-size: 1.875rem;
+}
+
+:host(.avatar-lg) {
+  --avatar-size: 3rem;
+}
+
+:host(.avatar-xl) {
+  --avatar-size: 5rem;
+}
