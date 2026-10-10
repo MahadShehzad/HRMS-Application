@@ -1,0 +1,27 @@
+.payslip {
+  max-width: 900px;
+
+  thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bs-secondary-color);
+  }
+
+  tfoot td {
+    border-bottom: 0;
+    border-top: 2px solid var(--bs-border-color);
+  }
+}
+
+.net-pay {
+  background: rgba(var(--bs-primary-rgb), 0.08);
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+}
+
+@media print {
+  .payslip {
+    max-width: none;
+    border: 0;
+  }
+}

@@ -1,0 +1,190 @@
+@if (auth.isManager()) {
+  <app-page-header title="Payroll" subtitle="Run monthly payroll, review payslips and track labour cost.">
+    <button type="button" class="btn btn-outline-secondary border" (click)="exportCsv()" [disabled]="!slips().length">
+      <i class="bi bi-download me-1"></i>Export
+    </button>
+    @if (totals().unpaid) {
+      <button type="button" class="btn btn-success" (click)="payAll()" [disabled]="paying()">
+        @if (paying()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>
+        } @else {
+          <i class="bi bi-bank me-1"></i>
+        }
+        Mark {{ totals().unpaid }} as paid
+      </button>
+    }
+    @if (pendingEmployees() && loaded()) {
+      <button type="button" class="btn btn-primary" (click)="runPayroll()" [disabled]="running()">
+        @if (running()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>Processing…
+        } @else {
+          <i class="bi bi-play-circle me-1"></i>Run payroll
+        }
+      </button>
+    }
+  </app-page-header>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <button type="button" class="btn btn-outline-secondary border" (click)="shiftPeriod(-1)" aria-label="Previous month"><i class="bi bi-chevron-left"></i></button>
+    <input type="month" class="form-control w-auto" [max]="currentPeriod" [value]="period()"
+           (change)="$any($event.target).value && period.set($any($event.target).value)" aria-label="Payroll period" />
+    <button type="button" class="btn btn-outline-secondary border" (click)="shiftPeriod(1)" [disabled]="period() >= currentPeriod" aria-label="Next month"><i class="bi bi-chevron-right"></i></button>
+    <span class="ms-2 fw-semibold d-none d-sm-inline">{{ periodLabel() }}</span>
+  </div>
+
+  @if (loaded() && pendingEmployees() && slips().length === 0) {
+    <div class="alert alert-info d-flex flex-column flex-sm-row align-items-sm-center gap-2" animate.enter="anim-fade-up">
+      <i class="bi bi-info-circle fs-5"></i>
+      <div class="flex-grow-1">Payroll hasn't been run for <strong>{{ periodLabel() }}</strong> yet. {{ pendingEmployees() }} employees are eligible.</div>
+      <button type="button" class="btn btn-sm btn-primary" (click)="runPayroll()" [disabled]="running()">Run now</button>
+    </div>
+  }
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card label="Payslips" icon="bi-receipt" [value]="totals().count" [loading]="!loaded()"
+                     [hint]="totals().unpaid ? totals().unpaid + ' awaiting payment' : 'All paid'" />
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card label="Gross pay" icon="bi-cash-stack" tone="primary" format="currency" [value]="totals().gross" [loading]="!loaded()" />
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card label="Deductions" icon="bi-dash-circle" tone="danger" format="currency" [value]="totals().deductions" [loading]="!loaded()"
+                     hint="Tax, pension & insurance" />
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <app-stat-card label="Net pay" icon="bi-wallet2" tone="success" format="currency" [value]="totals().net" [loading]="!loaded()" />
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-xxl-8 order-2 order-xxl-1">
+      <div class="card">
+        <div class="card-header py-3">
+          <h2 class="card-title">Payslips · {{ periodLabel() }}</h2>
+          <div class="d-flex gap-2">
+            <div class="input-icon">
+              <i class="bi bi-search"></i>
+              <input type="search" class="form-control form-control-sm" placeholder="Search…" aria-label="Search"
+                     [value]="search()" (input)="search.set($any($event.target).value)" />
+            </div>
+            <select class="form-select form-select-sm w-auto" aria-label="Department" [value]="deptFilter()" (change)="deptFilter.set($any($event.target).value)">
+              <option value="">All departments</option>
+              @for (d of departments.items(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        @if (!loaded()) {
+          <app-skeleton variant="table" [rows]="8" [cols]="5" />
+        } @else if (!rows().length) {
+          <app-empty-state icon="bi-receipt" title="No payslips for this period" message="Run payroll to generate payslips for eligible employees." />
+        } @else {
+          <div class="table-responsive" style="max-height: 640px">
+            <table class="table table-hr table-hover table-sticky">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th class="text-end d-none d-md-table-cell">Gross</th>
+                  <th class="text-end d-none d-lg-table-cell">Deductions</th>
+                  <th class="text-end">Net pay</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of rows(); track r.slip.id) {
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <app-avatar [name]="r.employee ? r.employee.firstName + ' ' + r.employee.lastName : '?'" size="sm" />
+                        <span class="min-w-0">
+                          <span class="d-block fw-medium text-truncate">{{ r.employee?.firstName }} {{ r.employee?.lastName }}</span>
+                          <span class="d-block small text-body-secondary text-truncate">{{ deptName(r.employee?.departmentId) }}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td class="text-end d-none d-md-table-cell">{{ r.slip.gross | currency }}</td>
+                    <td class="text-end d-none d-lg-table-cell text-body-secondary">−{{ r.slip.totalDeductions | currency }}</td>
+                    <td class="text-end fw-semibold">{{ r.slip.net | currency }}</td>
+                    <td><app-status-badge [status]="r.slip.status" /></td>
+                    <td class="text-end text-nowrap">
+                      @if (r.slip.status !== 'paid') {
+                        <button type="button" class="btn btn-sm btn-outline-success me-1" (click)="markPaid(r.slip)" aria-label="Mark as paid"><i class="bi bi-check2"></i></button>
+                      }
+                      <a [routerLink]="['payslips', r.slip.id]" class="btn btn-sm btn-light border-0" aria-label="View payslip"><i class="bi bi-eye"></i></a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="col-12 col-xxl-4 order-1 order-xxl-2">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Gross payroll cost</h2>
+            <div class="small text-body-secondary">Recent payroll runs</div>
+          </div>
+        </div>
+        <div class="card-body">
+          @if (loaded()) {
+            <app-column-chart [data]="costTrend()" [height]="260" seriesName="Gross pay" [format]="usd" [axisFormat]="compact"
+                              ariaLabel="Gross payroll cost for the last six months" />
+          } @else {
+            <app-skeleton variant="chart" [rows]="6" />
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+} @else {
+  <!-- ===== Employee: my payslips ===== -->
+  <app-page-header title="My payslips" subtitle="Download and review your monthly pay statements." />
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <app-stat-card label="Gross earnings (YTD)" icon="bi-cash-stack" format="currency" [value]="myYtd().gross" [loading]="!payroll.loaded()" />
+    </div>
+    <div class="col-12 col-md-4">
+      <app-stat-card label="Tax paid (YTD)" icon="bi-bank" tone="danger" format="currency" [value]="myYtd().tax" [loading]="!payroll.loaded()" />
+    </div>
+    <div class="col-12 col-md-4">
+      <app-stat-card label="Net pay (YTD)" icon="bi-wallet2" tone="success" format="currency" [value]="myYtd().net" [loading]="!payroll.loaded()" />
+    </div>
+  </div>
+
+  @if (!payroll.loaded()) {
+    <app-skeleton variant="cards" [rows]="3" />
+  } @else {
+    <div class="row g-3">
+      @for (p of mySlips(); track p.id) {
+        <div class="col-12 col-md-6 col-xl-4">
+          <a [routerLink]="['payslips', p.id]" class="card card-interactive h-100 text-decoration-none text-body">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <div class="small text-body-secondary">Pay period</div>
+                  <div class="fw-semibold">{{ p.period + '-01' | date: 'MMMM y' }}</div>
+                </div>
+                <app-status-badge [status]="p.status" />
+              </div>
+              <div class="small text-body-secondary">Net pay</div>
+              <div class="fs-4 fw-semibold mb-2">{{ p.net | currency }}</div>
+              <div class="d-flex justify-content-between small text-body-secondary">
+                <span>Gross {{ p.gross | currency }}</span>
+                <span>{{ p.paidOn ? 'Paid ' + (p.paidOn | date: 'MMM d') : 'Processing' }}</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      } @empty {
+        <div class="col-12"><div class="card"><app-empty-state icon="bi-receipt" title="No payslips yet" message="Your payslips will appear here after your first payroll run." /></div></div>
+      }
+    </div>
+  }
+}

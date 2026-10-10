@@ -1,0 +1,116 @@
+@if (!loaded()) {
+  <app-skeleton variant="cards" [rows]="1" colClass="col-12" />
+} @else if (!slip() || !allowed()) {
+  <div class="card">
+    <app-empty-state icon="bi-receipt" title="Payslip not available"
+                     message="This payslip doesn't exist or you don't have permission to view it.">
+      <a routerLink="/payroll" class="btn btn-sm btn-primary">Back to payroll</a>
+    </app-empty-state>
+  </div>
+} @else {
+  @let p = slip()!;
+  @let e = employee();
+  <div class="d-print-hide">
+    <app-page-header [title]="'Payslip · ' + (p.period + '-01' | date: 'MMMM y')"
+                     [breadcrumbs]="[{ label: 'Payroll', link: '/payroll' }, { label: 'Payslip' }]">
+      <button type="button" class="btn btn-primary" (click)="print()"><i class="bi bi-printer me-1"></i>Print / Save PDF</button>
+    </app-page-header>
+  </div>
+
+  <div class="card payslip mx-auto">
+    <div class="card-body p-4 p-md-5">
+      <!-- Header -->
+      <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 pb-4 mb-4 border-bottom">
+        <div>
+          <div class="fs-4 fw-bold text-primary">{{ appName }}</div>
+          <div class="small text-body-secondary">350 Fifth Avenue, New York, NY 10118</div>
+        </div>
+        <div class="text-sm-end">
+          <div class="text-uppercase small fw-semibold text-body-secondary ls-wide">Payslip</div>
+          <div class="fs-5 fw-semibold">{{ p.period + '-01' | date: 'MMMM y' }}</div>
+          <app-status-badge [status]="p.status" />
+        </div>
+      </div>
+
+      <!-- Employee -->
+      <div class="row g-3 mb-4 small">
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Employee</div>
+          <div class="fw-semibold">{{ name() }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Employee ID</div>
+          <div class="fw-semibold">{{ e?.code }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Department</div>
+          <div class="fw-semibold">{{ department() }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Designation</div>
+          <div class="fw-semibold">{{ e?.designation }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Paid days</div>
+          <div class="fw-semibold">{{ p.paidDays }} / {{ p.workingDays }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Bank account</div>
+          <div class="fw-semibold">{{ e?.bankAccount }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Generated</div>
+          <div class="fw-semibold">{{ p.generatedOn | date: 'mediumDate' }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="text-body-secondary">Payment date</div>
+          <div class="fw-semibold">{{ p.paidOn ? (p.paidOn | date: 'mediumDate') : 'Pending' }}</div>
+        </div>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="row g-4">
+        <div class="col-md-6">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Earnings</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+              @for (r of earnings(); track r.label) {
+                <tr><td>{{ r.label }}</td><td class="text-end tabular-nums">{{ r.value | currency }}</td></tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="fw-semibold"><td>Gross pay</td><td class="text-end tabular-nums">{{ p.gross | currency }}</td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="col-md-6">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Deductions</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+              @for (r of deductions(); track r.label) {
+                <tr><td>{{ r.label }}</td><td class="text-end tabular-nums">{{ r.value | currency }}</td></tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="fw-semibold"><td>Total deductions</td><td class="text-end tabular-nums">{{ p.totalDeductions | currency }}</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Net -->
+      <div class="net-pay d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-4 p-3 p-md-4 rounded-3">
+        <div>
+          <div class="small text-body-secondary">Net pay</div>
+          <div class="small">Gross {{ p.gross | currency }} − deductions {{ p.totalDeductions | currency }}</div>
+        </div>
+        <div class="display-6 fw-semibold tabular-nums">{{ p.net | currency }}</div>
+      </div>
+
+      <p class="small text-body-secondary mt-4 mb-0">
+        This is a system-generated payslip and does not require a signature. For questions about your pay, contact
+        payroll&#64;peoplecore.io.
+      </p>
+    </div>
+  </div>
+}
