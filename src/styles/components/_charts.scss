@@ -1,0 +1,115 @@
+// =============================================================================
+//  Chart chrome shared by every chart in shared/components/charts
+// =============================================================================
+
+.chart {
+  position: relative;
+  width: 100%;
+
+  svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .grid-line {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .baseline {
+    stroke: var(--chart-axis);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .axis-label {
+    fill: var(--chart-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .crosshair {
+    stroke: var(--chart-axis);
+    stroke-width: 1;
+  }
+}
+
+// Bars grow from the baseline once, when data first arrives
+.chart-grow {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: chart-grow 0.5s var(--hr-ease-out) both;
+}
+
+.chart-grow-x {
+  transform-origin: left;
+  animation: chart-grow-x 0.5s var(--hr-ease-out) both;
+}
+
+@keyframes chart-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes chart-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 120px;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  box-shadow: var(--bs-box-shadow);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px));
+  font-variant-numeric: tabular-nums;
+
+  .tt-title {
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.25rem;
+  }
+
+  .tt-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--bs-emphasis-color);
+
+    .tt-value {
+      margin-left: auto;
+      font-weight: 600;
+    }
+  }
+}
+
+.chart-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+}

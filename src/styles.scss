@@ -1,1 +1,24 @@
-/* You can add global styles to this file, and also import other style files */
+// =============================================================================
+//  Global stylesheet entry point
+//  ─ styles/_variables.scss      Bootstrap theme overrides (brand colours etc.)
+//  ─ styles/vendors/             Third-party CSS (Bootstrap)
+//  ─ styles/base/                Design tokens + element defaults
+//  ─ styles/components/          Shared component styles (cards, tables, forms…)
+//  ─ styles/utilities/           Animations & helper classes
+//  Component-specific styles live next to each component (.scss).
+// =============================================================================
+
+@import 'styles/variables';
+@import 'styles/vendors/bootstrap';
+
+@import 'styles/base/root';
+@import 'styles/base/base';
+
+@import 'styles/components/cards';
+@import 'styles/components/tables';
+@import 'styles/components/forms';
+@import 'styles/components/skeleton';
+@import 'styles/components/charts';
+
+@import 'styles/utilities/animations';
+@import 'styles/utilities/helpers';

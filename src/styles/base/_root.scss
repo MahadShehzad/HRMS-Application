@@ -1,0 +1,47 @@
+// =============================================================================
+//  App-level design tokens (CSS custom properties). Light first, dark overrides.
+// =============================================================================
+
+:root,
+[data-bs-theme='light'] {
+  --hr-canvas: #f3f5f9;
+  --hr-surface: var(--bs-body-bg);
+  --hr-sidebar-bg: #0f172a;
+  --hr-sidebar-color: #94a3b8;
+  --hr-sidebar-active: #ffffff;
+  --hr-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --hr-sidebar-width: 260px;
+  --hr-sidebar-collapsed-width: 76px;
+  --hr-topbar-height: 64px;
+  --hr-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  // Chart tokens — validated categorical palette (light steps)
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #4a3aa7;
+  --chart-8: #e34948;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
+}
+
+[data-bs-theme='dark'] {
+  --hr-canvas: #0e1218;
+  --hr-sidebar-bg: #0b0f17;
+  --hr-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+}

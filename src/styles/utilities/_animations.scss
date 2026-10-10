@@ -1,0 +1,116 @@
+// =============================================================================
+//  Motion system
+//  Animations are used ONLY where they communicate something:
+//   - route change (view transition on the content area)
+//   - things appearing/disappearing (toasts, dropdown results, list inserts)
+//   - loading feedback (splash, progress bar, skeleton shimmer)
+//  Everything is disabled for users who prefer reduced motion.
+// =============================================================================
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes slide-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes collapse-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+// Classes consumed by Angular's `animate.enter` / `animate.leave`
+.anim-fade-in {
+  animation: fade-in 0.2s ease-out both;
+}
+
+.anim-fade-up {
+  animation: fade-up 0.28s var(--hr-ease-out) both;
+}
+
+.anim-scale-in {
+  animation: scale-in 0.18s var(--hr-ease-out) both;
+}
+
+.anim-toast-in {
+  animation: slide-in-right 0.28s var(--hr-ease-out) both;
+}
+
+.anim-toast-out {
+  animation: slide-out-right 0.2s ease-in both;
+}
+
+.anim-fade-out {
+  animation: fade-out 0.16s ease-in both;
+}
+
+.anim-collapse-out {
+  animation: collapse-out 0.18s ease-in both;
+}
+
+// ---- Route transitions (Router `withViewTransitions`) -----------------------
+// Only the main content region animates; sidebar & topbar stay perfectly still.
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(page) {
+  animation: fade-out 90ms ease-in both;
+}
+
+::view-transition-new(page) {
+  animation: fade-up 220ms var(--hr-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

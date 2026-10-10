@@ -1,0 +1,49 @@
+// =============================================================================
+//  Skeleton loaders — shimmer placeholders shown while data loads
+// =============================================================================
+
+.skeleton {
+  display: block;
+  border-radius: var(--bs-border-radius-sm);
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(var(--bs-body-bg-rgb), 0.6) 50%,
+      transparent 100%
+    ),
+    var(--bs-secondary-bg);
+  background-size:
+    200% 100%,
+    100% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.3s linear infinite;
+
+  &.skeleton-text {
+    height: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &.skeleton-title {
+    height: 1.1rem;
+    width: 40%;
+    margin-bottom: 0.75rem;
+  }
+
+  &.skeleton-circle {
+    border-radius: 50%;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position:
+      -150% 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      250% 0,
+      0 0;
+  }
+}

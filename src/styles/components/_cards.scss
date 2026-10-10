@@ -1,0 +1,96 @@
+// =============================================================================
+//  Card refinements on top of Bootstrap .card
+// =============================================================================
+
+.card {
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-bottom-color: var(--bs-border-color);
+
+  .card-title {
+    margin-bottom: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+}
+
+// Clickable cards lift slightly on hover — only where interaction exists
+.card-interactive {
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--hr-ease-out),
+    box-shadow 0.18s var(--hr-ease-out),
+    border-color 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bs-box-shadow);
+    border-color: rgba(var(--bs-primary-rgb), 0.35);
+  }
+}
+
+// Square icon tile used in stat cards, list items, etc.
+.icon-box {
+  --size: 2.5rem;
+  width: var(--size);
+  height: var(--size);
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--bs-border-radius);
+  font-size: calc(var(--size) * 0.45);
+
+  &.icon-box-sm {
+    --size: 2rem;
+  }
+
+  &.icon-box-lg {
+    --size: 3rem;
+  }
+}
+
+// Small coloured status dot
+.status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+// Calendar-style date tile (holidays, events)
+.date-chip {
+  width: 2.75rem;
+  flex-shrink: 0;
+  text-align: center;
+  border-radius: var(--bs-border-radius);
+  border: 1px solid var(--bs-border-color);
+  overflow: hidden;
+  line-height: 1.1;
+
+  span {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 0;
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary-text-emphasis);
+  }
+
+  strong {
+    display: block;
+    padding: 3px 0;
+    font-size: 1rem;
+  }
+}
+

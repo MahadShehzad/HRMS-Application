@@ -1,0 +1,55 @@
+// =============================================================================
+//  Small utility classes Bootstrap doesn't ship
+// =============================================================================
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.fs-xs {
+  font-size: 0.75rem !important;
+}
+
+.fw-medium {
+  font-weight: 500 !important;
+}
+
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.ls-wide {
+  letter-spacing: 0.05em;
+}
+
+// Hide elements when printing payslips/reports
+@media print {
+  .d-print-hide,
+  .app-sidebar,
+  .app-topbar,
+  .toast-stack,
+  .route-progress {
+    display: none !important;
+  }
+
+  body,
+  .app-main {
+    background: #fff !important;
+  }
+
+  .app-content {
+    padding: 0 !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+  }
+}

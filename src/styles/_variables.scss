@@ -1,0 +1,95 @@
+// =============================================================================
+//  Bootstrap theme overrides — edit brand colours, radius, typography here.
+//  Loaded BEFORE Bootstrap so every component picks these values up.
+// =============================================================================
+
+// ---- Brand palette ----------------------------------------------------------
+$primary: #4361ee;
+$secondary: #64748b;
+$success: #12a150;
+$info: #0b9fd8;
+$warning: #f5a524;
+$danger: #e5484d;
+$light: #f3f5f9;
+$dark: #111827;
+
+// ---- Surfaces (light) -------------------------------------------------------
+$body-bg: #ffffff;
+$body-color: #1f2937;
+$body-secondary-color: rgba(31, 41, 55, 0.7);
+$border-color: #e6e9ef;
+
+// ---- Surfaces (dark) — used when <html data-bs-theme="dark"> ---------------
+$body-bg-dark: #151a23;
+$body-color-dark: #d6dbe4;
+$body-secondary-bg-dark: #1b2130;
+$body-tertiary-bg-dark: #1a1f2b;
+$border-color-dark: #283041;
+
+// ---- Typography -------------------------------------------------------------
+$font-family-sans-serif:
+  'Inter',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$font-size-base: 0.875rem;
+$font-size-sm: 0.8125rem;
+$headings-font-weight: 600;
+$headings-margin-bottom: 0.5rem;
+$small-font-size: 0.8125rem;
+$link-decoration: none;
+
+// ---- Shape & depth ----------------------------------------------------------
+$border-radius: 0.5rem;
+$border-radius-sm: 0.375rem;
+$border-radius-lg: 0.75rem;
+$border-radius-xl: 1rem;
+$box-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+$box-shadow: 0 4px 16px rgba(16, 24, 40, 0.08);
+$box-shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.14);
+$enable-negative-margins: true;
+
+// ---- Components -------------------------------------------------------------
+$btn-font-weight: 500;
+$btn-padding-x: 0.9rem;
+$input-btn-focus-width: 0.2rem;
+$input-btn-focus-color-opacity: 0.2;
+
+$card-spacer-y: 1.25rem;
+$card-spacer-x: 1.25rem;
+$card-cap-bg: transparent;
+$card-cap-padding-y: 1rem;
+$card-border-color: var(--bs-border-color);
+
+$table-cell-padding-y: 0.75rem;
+$table-cell-padding-x: 1rem;
+$table-cell-padding-y-sm: 0.5rem;
+$table-th-font-weight: 600;
+$table-bg: transparent;
+
+$dropdown-border-color: var(--bs-border-color);
+$dropdown-box-shadow: $box-shadow;
+$dropdown-link-active-bg: $primary;
+$dropdown-padding-y: 0.375rem;
+$dropdown-item-padding-y: 0.45rem;
+
+$modal-content-border-width: 0;
+$modal-backdrop-opacity: 0.45;
+$modal-header-padding: 1rem 1.25rem;
+$modal-inner-padding: 1.25rem;
+
+$nav-link-font-weight: 500;
+$nav-tabs-link-active-color: $primary;
+$nav-underline-link-active-color: $primary;
+
+$badge-font-weight: 600;
+$badge-padding-y: 0.4em;
+$badge-padding-x: 0.65em;
+
+$progress-height: 0.5rem;
+$offcanvas-horizontal-width: 260px;
+$toast-max-width: 380px;

@@ -1,0 +1,56 @@
+// =============================================================================
+//  Base element styles
+// =============================================================================
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--hr-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+.h1 {
+  font-size: 1.5rem;
+}
+
+h2,
+.h2 {
+  font-size: 1.25rem;
+}
+
+h3,
+.h3 {
+  font-size: 1.125rem;
+}
+
+h4,
+.h4,
+h5,
+.h5 {
+  font-size: 1rem;
+}
+
+::selection {
+  background: rgba(var(--bs-primary-rgb), 0.18);
+}
+
+// Slim, theme-aware scrollbars
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--bs-emphasis-color-rgb), 0.18) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(var(--bs-primary-rgb), 0.55);
+  outline-offset: 2px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

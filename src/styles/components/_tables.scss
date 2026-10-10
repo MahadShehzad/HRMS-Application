@@ -1,0 +1,48 @@
+// =============================================================================
+//  Data tables — use `.table .table-hr` inside `.table-responsive`
+// =============================================================================
+
+.table-hr {
+  margin-bottom: 0;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+
+  > thead > tr > th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+    border-bottom-width: 1px;
+    white-space: nowrap;
+  }
+
+  > tbody > tr {
+    transition: background-color 0.12s ease;
+
+    &:last-child > td {
+      border-bottom: 0;
+    }
+  }
+
+  &.table-hover > tbody > tr:hover > * {
+    --bs-table-bg-state: rgba(var(--bs-primary-rgb), 0.04);
+  }
+
+  .th-sortable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: var(--bs-emphasis-color);
+    }
+  }
+}
+
+// Keeps a sticky header for long scrolling tables
+.table-sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
