@@ -1,0 +1,169 @@
+<app-page-header title="Announcements" subtitle="Company news, policy updates and the holiday calendar.">
+  @if (auth.isManager()) {
+    <button type="button" class="btn btn-primary" (click)="openPost()"><i class="bi bi-megaphone me-1"></i>New announcement</button>
+  }
+</app-page-header>
+
+<div class="row g-3">
+  <!-- Feed -->
+  <div class="col-12 col-xl-8">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <button type="button" class="btn btn-sm rounded-pill" [class]="!category() ? 'btn-primary' : 'btn-outline-secondary border'" (click)="category.set('')">All</button>
+      @for (c of categories; track c) {
+        <button type="button" class="btn btn-sm rounded-pill" [class]="category() === c ? 'btn-primary' : 'btn-outline-secondary border'"
+                (click)="category.set(c)">{{ c | label }}</button>
+      }
+    </div>
+
+    @if (!announcements.loaded()) {
+      <app-skeleton variant="cards" [rows]="3" colClass="col-12" />
+    } @else {
+      <div class="d-grid gap-3">
+        @for (a of feed(); track a.id) {
+          <article class="card" [class.border-primary]="a.pinned" animate.leave="anim-collapse-out">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <app-avatar [name]="nameOf(a.authorId)" />
+                <div class="min-w-0 flex-grow-1">
+                  <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <h2 class="h6 mb-0">{{ a.title }}</h2>
+                    <app-status-badge [status]="a.category" />
+                    @if (a.pinned) {
+                      <span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-pin-angle-fill me-1"></i>Pinned</span>
+                    }
+                  </div>
+                  <div class="small text-body-secondary mb-2">{{ nameOf(a.authorId) }} · {{ a.publishedOn | relativeDate }}</div>
+                  <p class="mb-0" style="white-space: pre-line">{{ a.body }}</p>
+                </div>
+                @if (auth.isManager()) {
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-light border-0" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Announcement actions">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><button type="button" class="dropdown-item" (click)="togglePin(a)"><i class="bi bi-pin-angle me-2"></i>{{ a.pinned ? 'Unpin' : 'Pin to top' }}</button></li>
+                      <li><button type="button" class="dropdown-item" (click)="openPost(a)"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li><button type="button" class="dropdown-item text-danger" (click)="removePost(a)"><i class="bi bi-trash3 me-2"></i>Delete</button></li>
+                    </ul>
+                  </div>
+                }
+              </div>
+            </div>
+          </article>
+        } @empty {
+          <div class="card"><app-empty-state icon="bi-megaphone" title="No announcements" message="Nothing has been posted in this category yet." /></div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Holidays -->
+  <div class="col-12 col-xl-4">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Holiday calendar</h2>
+          <div class="small text-body-secondary">{{ upcomingCount() }} upcoming</div>
+        </div>
+        @if (auth.isManager()) {
+          <button type="button" class="btn btn-sm btn-outline-primary" (click)="openHoliday()"><i class="bi bi-plus-lg"></i> Add</button>
+        }
+      </div>
+      <div class="card-body">
+        @if (!holidays.loaded()) {
+          <app-skeleton variant="list" [rows]="6" />
+        }
+        @for (g of holidayGroups(); track g.month) {
+          <div class="form-section-title mb-2 mt-1">{{ g.month | date: 'MMMM y' }}</div>
+          <ul class="list-unstyled mb-3">
+            @for (h of g.items; track h.id) {
+              <li class="d-flex align-items-center gap-3 py-2" [class.opacity-50]="h.date < today">
+                <div class="date-chip">
+                  <span>{{ h.date | date: 'EEE' }}</span>
+                  <strong>{{ h.date | date: 'd' }}</strong>
+                </div>
+                <div class="min-w-0 flex-grow-1">
+                  <div class="fw-medium small text-truncate">{{ h.name }}</div>
+                  <div class="fs-xs text-body-secondary">{{ h.type === 'optional' ? 'Optional holiday' : 'Public holiday' }}</div>
+                </div>
+                @if (auth.isManager()) {
+                  <button type="button" class="btn btn-sm btn-link text-body-secondary" (click)="removeHoliday(h)" [attr.aria-label]="'Remove ' + h.name">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Announcement modal -->
+<app-modal #postModal [title]="editing() ? 'Edit announcement' : 'New announcement'" size="lg" [staticBackdrop]="true">
+  <form [formGroup]="postForm" id="postForm" (ngSubmit)="savePost()" novalidate>
+    <div class="mb-3">
+      <label for="pTitle" class="form-label required">Title</label>
+      <input id="pTitle" class="form-control" formControlName="title"
+             [class.is-invalid]="postForm.controls.title.touched && postForm.controls.title.invalid" />
+      <app-field-error [control]="postForm.controls.title" label="Title" />
+    </div>
+    <div class="mb-3">
+      <label for="pBody" class="form-label required">Message</label>
+      <textarea id="pBody" rows="6" class="form-control" formControlName="body"
+                [class.is-invalid]="postForm.controls.body.touched && postForm.controls.body.invalid"></textarea>
+      <app-field-error [control]="postForm.controls.body" label="Message" />
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-6">
+        <label for="pCat" class="form-label">Category</label>
+        <select id="pCat" class="form-select" formControlName="category">
+          @for (c of categories; track c) {
+            <option [value]="c">{{ c | label }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-sm-6">
+        <div class="form-check form-switch mb-2">
+          <input id="pPin" type="checkbox" role="switch" class="form-check-input" formControlName="pinned" />
+          <label for="pPin" class="form-check-label">Pin to the top of the feed</label>
+        </div>
+      </div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="postModal.close()">Cancel</button>
+    <button type="submit" form="postForm" class="btn btn-primary" [disabled]="saving()">{{ editing() ? 'Save changes' : 'Publish' }}</button>
+  </ng-container>
+</app-modal>
+
+<!-- Holiday modal -->
+<app-modal #holidayModal title="Add holiday" size="sm">
+  <form [formGroup]="holidayForm" id="holForm" (ngSubmit)="saveHoliday()" novalidate>
+    <div class="mb-3">
+      <label for="hName" class="form-label required">Name</label>
+      <input id="hName" class="form-control" formControlName="name"
+             [class.is-invalid]="holidayForm.controls.name.touched && holidayForm.controls.name.invalid" />
+      <app-field-error [control]="holidayForm.controls.name" label="Name" />
+    </div>
+    <div class="mb-3">
+      <label for="hDate" class="form-label required">Date</label>
+      <input id="hDate" type="date" class="form-control" formControlName="date"
+             [class.is-invalid]="holidayForm.controls.date.touched && holidayForm.controls.date.invalid" />
+      <app-field-error [control]="holidayForm.controls.date" label="Date" />
+    </div>
+    <div>
+      <label for="hType" class="form-label">Type</label>
+      <select id="hType" class="form-select" formControlName="type">
+        <option value="public">Public</option>
+        <option value="optional">Optional</option>
+      </select>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="holidayModal.close()">Cancel</button>
+    <button type="submit" form="holForm" class="btn btn-primary" [disabled]="saving()">Add holiday</button>
+  </ng-container>
+</app-modal>
