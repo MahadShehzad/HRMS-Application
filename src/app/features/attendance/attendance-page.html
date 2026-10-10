@@ -1,0 +1,256 @@
+<app-page-header title="Attendance"
+                 [subtitle]="auth.isManager() ? 'Track daily presence, punctuality and working hours.' : 'Your clock-ins, hours and monthly record.'">
+  @if (auth.isManager()) {
+    <div class="btn-group" role="group" aria-label="View">
+      <button type="button" class="btn btn-outline-secondary border" [class.active]="view() === 'daily'" (click)="view.set('daily')">
+        <i class="bi bi-list-check me-1"></i>Daily log
+      </button>
+      <button type="button" class="btn btn-outline-secondary border" [class.active]="view() === 'monthly'" (click)="view.set('monthly')">
+        <i class="bi bi-calendar3 me-1"></i>Monthly
+      </button>
+    </div>
+  }
+</app-page-header>
+
+@if (view() === 'daily') {
+  <!-- ===== Daily log ===== -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xl-4">
+      <app-clock-card (changed)="onClockChange()" />
+    </div>
+    <div class="col-12 col-xl-8">
+      <div class="row g-3 h-100">
+        <div class="col-6 col-md-4">
+          <app-stat-card label="Attended" icon="bi-person-check" tone="success" [value]="dayStats().attended"
+                         [loading]="!dayRecords()" [hint]="'of ' + dayStats().total + ' employees'" />
+        </div>
+        <div class="col-6 col-md-4">
+          <app-stat-card label="Late arrivals" icon="bi-alarm" tone="warning" [value]="dayStats().late" [loading]="!dayRecords()" />
+        </div>
+        <div class="col-6 col-md-4">
+          <app-stat-card label="Remote" icon="bi-house-door" tone="primary" [value]="dayStats().remote" [loading]="!dayRecords()" />
+        </div>
+        <div class="col-6 col-md-4">
+          <app-stat-card label="Absent" icon="bi-person-x" tone="danger" [value]="dayStats().absent" [loading]="!dayRecords()" />
+        </div>
+        <div class="col-6 col-md-4">
+          <app-stat-card label="On leave" icon="bi-airplane" tone="info" [value]="dayStats().leave" [loading]="!dayRecords()" />
+        </div>
+        <div class="col-6 col-md-4">
+          <app-stat-card label="Not marked" icon="bi-question-circle" tone="secondary" [value]="dayStats().unmarked" [loading]="!dayRecords()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header py-3">
+      <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+        <div class="input-group w-auto">
+          <button type="button" class="btn btn-outline-secondary border" (click)="shiftDate(-1)" aria-label="Previous day"><i class="bi bi-chevron-left"></i></button>
+          <input type="date" class="form-control" style="max-width: 170px" [max]="today" [value]="date()"
+                 (change)="$any($event.target).value && date.set($any($event.target).value)" aria-label="Date" />
+          <button type="button" class="btn btn-outline-secondary border" (click)="shiftDate(1)" [disabled]="date() >= today" aria-label="Next day"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        @if (date() !== today) {
+          <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="date.set(today)">Today</button>
+        }
+        <div class="input-icon flex-grow-1" style="min-width: 180px; max-width: 280px">
+          <i class="bi bi-search"></i>
+          <input type="search" class="form-control" placeholder="Search employee…" aria-label="Search"
+                 [value]="search()" (input)="search.set($any($event.target).value)" />
+        </div>
+        <select class="form-select w-auto" aria-label="Department" [value]="deptFilter()" (change)="deptFilter.set($any($event.target).value)">
+          <option value="">All departments</option>
+          @for (d of departments.items(); track d.id) {
+            <option [value]="d.id">{{ d.name }}</option>
+          }
+        </select>
+        <select class="form-select w-auto" aria-label="Status" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)">
+          <option value="">All statuses</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ s | label }}</option>
+          }
+          <option value="none">Not marked</option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary border ms-auto" (click)="exportDay()" [disabled]="!dayRecords()">
+          <i class="bi bi-download me-1"></i>Export
+        </button>
+      </div>
+    </div>
+
+    @if (!dayRecords() || !employees.loaded()) {
+      <app-skeleton variant="table" [rows]="8" [cols]="6" />
+    } @else if (!filteredRows().length) {
+      <app-empty-state icon="bi-calendar-x" title="No matching records" message="Try another date or adjust the filters." />
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hr table-hover">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th class="d-none d-md-table-cell">Department</th>
+              <th>Check in</th>
+              <th>Check out</th>
+              <th class="d-none d-sm-table-cell">Hours</th>
+              <th>Status</th>
+              <th class="text-end"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of filteredRows(); track row.employee.id) {
+              <tr>
+                <td>
+                  <a [routerLink]="['/employees', row.employee.id]" class="d-flex align-items-center gap-2 text-body">
+                    <app-avatar [name]="row.employee.firstName + ' ' + row.employee.lastName" size="sm" />
+                    <span class="min-w-0">
+                      <span class="d-block fw-medium text-truncate">{{ row.employee.firstName }} {{ row.employee.lastName }}</span>
+                      <span class="d-block small text-body-secondary text-truncate">{{ row.employee.designation }}</span>
+                    </span>
+                  </a>
+                </td>
+                <td class="d-none d-md-table-cell">{{ deptName(row.employee.departmentId) }}</td>
+                <td class="tabular-nums">{{ row.record?.checkIn ?? '—' }}</td>
+                <td class="tabular-nums">{{ row.record?.checkOut ?? (row.record?.checkIn ? 'Working' : '—') }}</td>
+                <td class="d-none d-sm-table-cell tabular-nums">{{ row.record?.hours ? (row.record!.hours | number: '1.1-1') + 'h' : '—' }}</td>
+                <td>
+                  @if (row.record) {
+                    <app-status-badge [status]="row.record.status" />
+                  } @else {
+                    <span class="badge rounded-pill bg-body-secondary text-body-secondary">Not marked</span>
+                  }
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-light border-0" (click)="openEdit(row)"
+                          [attr.aria-label]="'Edit attendance for ' + row.employee.firstName">
+                    <i class="bi bi-pencil-square"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+} @else {
+  <!-- ===== Monthly ===== -->
+  <div class="row g-3 mb-3">
+    @if (!auth.isManager()) {
+      <div class="col-12 col-xl-4">
+        <app-clock-card (changed)="onClockChange()" />
+      </div>
+    }
+    <div class="col-12" [class.col-xl-8]="!auth.isManager()">
+      <div class="row g-3 h-100">
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="Days attended" icon="bi-person-check" tone="success" [value]="monthStats().attended" [loading]="!monthRecords()" />
+        </div>
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="Late" icon="bi-alarm" tone="warning" [value]="monthStats().late" [loading]="!monthRecords()" />
+        </div>
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="Absent" icon="bi-person-x" tone="danger" [value]="monthStats().absent" [loading]="!monthRecords()" />
+        </div>
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="On leave" icon="bi-airplane" tone="info" [value]="monthStats().leave" [loading]="!monthRecords()" />
+        </div>
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="Total hours" icon="bi-hourglass-split" tone="primary" [value]="monthStats().totalHours" [loading]="!monthRecords()" />
+        </div>
+        <div class="col-6 col-md-4" [class.col-xl-2]="auth.isManager()">
+          <app-stat-card label="Avg / day" icon="bi-clock-history" tone="secondary" [value]="monthStats().avgHours" [decimals]="1" [loading]="!monthRecords()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header py-3">
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="shiftMonth(-1)" aria-label="Previous month"><i class="bi bi-chevron-left"></i></button>
+        <h2 class="card-title mx-1 text-nowrap">{{ monthLabel() }}</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="shiftMonth(1)" [disabled]="isCurrentMonth()" aria-label="Next month"><i class="bi bi-chevron-right"></i></button>
+      </div>
+      @if (auth.isManager()) {
+        <select class="form-select w-auto" aria-label="Employee" [value]="monthEmployeeId()" (change)="monthEmployeeId.set($any($event.target).value)">
+          @for (e of employeeOptions(); track e.id) {
+            <option [value]="e.id">{{ e.firstName }} {{ e.lastName }}</option>
+          }
+        </select>
+      }
+    </div>
+    <div class="card-body">
+      @if (!monthRecords()) {
+        <app-skeleton variant="chart" [rows]="7" />
+      } @else {
+        <app-attendance-calendar [month]="month()" [records]="monthRecords()!" [holidays]="holidays.items()" />
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Daily records</h2></div>
+    @if (!monthRecords()) {
+      <app-skeleton variant="table" [rows]="5" [cols]="5" />
+    } @else if (!sortedMonthRecords().length) {
+      <app-empty-state icon="bi-calendar-x" title="No records this month" />
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hr table-sm">
+          <thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Hours</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (r of sortedMonthRecords(); track r.id) {
+              <tr>
+                <td class="text-nowrap">{{ r.date | date: 'EEE, MMM d' }}</td>
+                <td class="tabular-nums">{{ r.checkIn ?? '—' }}</td>
+                <td class="tabular-nums">{{ r.checkOut ?? (r.checkIn ? 'Working' : '—') }}</td>
+                <td class="tabular-nums">{{ r.hours ? (r.hours | number: '1.1-1') + 'h' : '—' }}</td>
+                <td><app-status-badge [status]="r.status" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
+
+<!-- Edit / regularise attendance -->
+<app-modal #editModal title="Edit attendance" [subtitle]="editing() ? editing()!.employee.firstName + ' ' + editing()!.employee.lastName + ' · ' + (date() | date: 'mediumDate') : ''">
+  <form [formGroup]="editForm" id="attForm" (ngSubmit)="saveEdit()">
+    <div class="mb-3">
+      <label for="aStatus" class="form-label">Status</label>
+      <select id="aStatus" class="form-select" formControlName="status">
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ s | label }}</option>
+        }
+      </select>
+    </div>
+    @if (editForm.controls.status.value !== 'absent' && editForm.controls.status.value !== 'on-leave') {
+      <div class="row g-3 mb-3">
+        <div class="col-6">
+          <label for="aIn" class="form-label">Check in</label>
+          <input id="aIn" type="time" class="form-control" formControlName="checkIn" />
+        </div>
+        <div class="col-6">
+          <label for="aOut" class="form-label">Check out</label>
+          <input id="aOut" type="time" class="form-control" formControlName="checkOut" />
+        </div>
+      </div>
+    }
+    <div>
+      <label for="aNote" class="form-label">Note</label>
+      <textarea id="aNote" rows="2" class="form-control" formControlName="note" placeholder="Reason for the correction (optional)"></textarea>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="editModal.close()">Cancel</button>
+    <button type="submit" form="attForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      Save
+    </button>
+  </ng-container>
+</app-modal>

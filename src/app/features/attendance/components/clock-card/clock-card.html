@@ -1,0 +1,72 @@
+<div class="card h-100 clock-card overflow-hidden">
+  <div class="card-body d-flex flex-column">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <div class="small text-white-50">{{ now() | date: 'EEEE, MMMM d' }}</div>
+        <div class="clock-time tabular-nums">{{ now() | date: 'HH:mm' }}<span class="seconds">{{ now() | date: ':ss' }}</span></div>
+      </div>
+      @if (record(); as r) {
+        <app-status-badge [status]="r.status" />
+      }
+    </div>
+
+    @if (loading()) {
+      <span class="skeleton mb-2" style="height: 1rem; width: 60%; opacity: .4"></span>
+      <span class="skeleton mt-auto" style="height: 2.5rem; opacity: .4"></span>
+    } @else {
+      @switch (state()) {
+        @case ('out') {
+          <p class="small text-white-50 mb-3">You haven't clocked in today. Shift starts at {{ shiftStart }}.</p>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="remoteSwitch"
+                   [checked]="remote()" (change)="remote.set($any($event.target).checked)" />
+            <label class="form-check-label small" for="remoteSwitch">Working remotely today</label>
+          </div>
+          <button type="button" class="btn btn-light w-100 mt-auto fw-semibold" (click)="clockIn()" [disabled]="busy()">
+            @if (busy()) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+            } @else {
+              <i class="bi bi-box-arrow-in-right me-2"></i>
+            }
+            Clock in
+          </button>
+        }
+        @case ('in') {
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-white-50">Since {{ record()!.checkIn }}</span>
+            <span class="fw-semibold tabular-nums">{{ elapsed() }}</span>
+          </div>
+          <div class="progress bg-white bg-opacity-25 mb-3" role="progressbar" aria-label="Workday progress"
+               [attr.aria-valuenow]="dayProgress()" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bg-white" [style.width.%]="dayProgress()"></div>
+          </div>
+          <button type="button" class="btn btn-outline-light w-100 mt-auto fw-semibold" (click)="clockOut()" [disabled]="busy()">
+            @if (busy()) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+            } @else {
+              <i class="bi bi-box-arrow-right me-2"></i>
+            }
+            Clock out
+          </button>
+        }
+        @case ('done') {
+          <div class="row text-center g-2 mt-auto">
+            <div class="col-4">
+              <div class="small text-white-50">In</div>
+              <div class="fw-semibold">{{ record()!.checkIn }}</div>
+            </div>
+            <div class="col-4">
+              <div class="small text-white-50">Out</div>
+              <div class="fw-semibold">{{ record()!.checkOut }}</div>
+            </div>
+            <div class="col-4">
+              <div class="small text-white-50">Total</div>
+              <div class="fw-semibold">{{ record()!.hours.toFixed(1) }}h</div>
+            </div>
+          </div>
+          <p class="small text-white-50 text-center mb-0 mt-3"><i class="bi bi-check2-circle me-1"></i>Day complete — see you tomorrow!</p>
+        }
+      }
+    }
+  </div>
+</div>
