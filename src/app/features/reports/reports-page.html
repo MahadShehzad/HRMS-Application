@@ -1,0 +1,115 @@
+<app-page-header title="Reports" [subtitle]="'Workforce analytics for ' + year + '.'">
+  <button type="button" class="btn btn-primary" (click)="exportHeadcountReport()" [disabled]="!loaded()">
+    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export headcount report
+  </button>
+</app-page-header>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-4 col-xxl">
+    <app-stat-card label="Headcount" icon="bi-people" [value]="kpis().headcount" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-lg-4 col-xxl">
+    <app-stat-card label="New hires (YTD)" icon="bi-person-plus" tone="success" [value]="kpis().hires" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-lg-4 col-xxl">
+    <app-stat-card label="Attrition rate" icon="bi-person-dash" tone="danger" format="percent" [decimals]="1" [value]="kpis().attrition" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-lg-6 col-xxl">
+    <app-stat-card label="Average tenure" icon="bi-hourglass-split" tone="info" [decimals]="1" [value]="kpis().avgTenure" [loading]="!loaded()" hint="Years" />
+  </div>
+  <div class="col-12 col-lg-6 col-xxl">
+    <app-stat-card label="Annual salary cost" icon="bi-cash-stack" tone="warning" format="compact" [value]="kpis().payroll" [loading]="!loaded()" hint="USD, active employees" />
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Headcount by department</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="export('headcount-by-department', headcountByDept(), 'Employees')" aria-label="Export headcount by department">
+          <i class="bi bi-download"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (loaded()) {
+          <app-bar-list-chart [data]="headcountByDept()" />
+        } @else {
+          <app-skeleton variant="list" [rows]="6" />
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Annual salary cost by department</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="export('salary-by-department', salaryByDept(), 'Annual salary (USD)')" aria-label="Export salary cost">
+          <i class="bi bi-download"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (loaded()) {
+          <app-bar-list-chart [data]="salaryByDept()" [format]="usdCompact" color="var(--chart-7)" />
+        } @else {
+          <app-skeleton variant="list" [rows]="6" />
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Gender diversity</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="export('gender-diversity', gender(), 'Employees')" aria-label="Export gender diversity">
+          <i class="bi bi-download"></i>
+        </button>
+      </div>
+      <div class="card-body d-flex align-items-center">
+        @if (loaded()) {
+          <app-donut-chart class="w-100" [data]="gender()" centerLabel="Employees" ariaLabel="Employees by gender" />
+        } @else {
+          <app-skeleton variant="list" [rows]="3" class="w-100" />
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Tenure distribution</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="export('tenure-distribution', tenure(), 'Employees')" aria-label="Export tenure distribution">
+          <i class="bi bi-download"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (loaded()) {
+          <app-column-chart [data]="tenure()" seriesName="Employees" [height]="220" ariaLabel="Employees by years of tenure" />
+        } @else {
+          <app-skeleton variant="chart" [rows]="5" />
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Leave taken by type</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="export('leave-by-type', leaveByType(), 'Approved days')" aria-label="Export leave by type">
+          <i class="bi bi-download"></i>
+        </button>
+      </div>
+      <div class="card-body d-flex align-items-center">
+        @if (loaded()) {
+          <app-donut-chart class="w-100" [data]="leaveByType()" centerLabel="Days approved" [format]="days" ariaLabel="Approved leave days by type" />
+        } @else {
+          <app-skeleton variant="list" [rows]="4" class="w-100" />
+        }
+      </div>
+    </div>
+  </div>
+</div>
