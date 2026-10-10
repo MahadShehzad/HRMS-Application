@@ -1,0 +1,159 @@
+<app-page-header title="Departments" subtitle="Organisation structure, leadership and budgets.">
+  <button type="button" class="btn btn-primary" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New department</button>
+</app-page-header>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <app-stat-card label="Departments" icon="bi-diagram-3" [value]="totals().count" [loading]="!loaded()" />
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <app-stat-card label="Employees" icon="bi-people" tone="success" [value]="totals().people" [loading]="!loaded()" />
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <app-stat-card label="Average team size" icon="bi-person-lines-fill" tone="info" [value]="totals().avgSize"
+                   [decimals]="1" [loading]="!loaded()" />
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <app-stat-card label="Total annual budget" icon="bi-piggy-bank" tone="warning" format="compact"
+                   [value]="totals().budget" [loading]="!loaded()" hint="USD, all departments" />
+  </div>
+</div>
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+  <h2 class="h5 mb-0">All departments</h2>
+  <div class="input-icon" style="max-width: 280px">
+    <i class="bi bi-search"></i>
+    <input type="search" class="form-control" placeholder="Search departments…" aria-label="Search departments"
+           [value]="search()" (input)="search.set($any($event.target).value)" />
+  </div>
+</div>
+
+@if (!loaded()) {
+  <app-skeleton variant="cards" [rows]="6" />
+} @else {
+  <div class="row g-3">
+    @for (c of cards(); track c.dept.id) {
+      <div class="col-12 col-md-6 col-xxl-4" animate.leave="anim-collapse-out">
+        <div class="card h-100 dept-card" [style.--dept-color]="c.color">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-start gap-3 mb-3">
+              <div class="dept-icon">{{ c.dept.code }}</div>
+              <div class="min-w-0 flex-grow-1">
+                <h3 class="h6 mb-0 text-truncate">{{ c.dept.name }}</h3>
+                <div class="small text-body-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.dept.location }}</div>
+              </div>
+              <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-light border-0" data-bs-toggle="dropdown" aria-expanded="false"
+                        [attr.aria-label]="'Actions for ' + c.dept.name">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" routerLink="/employees" [queryParams]="{ department: c.dept.id }"><i class="bi bi-people me-2"></i>View employees</a></li>
+                  <li><button type="button" class="dropdown-item" (click)="openEdit(c.dept)"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li><button type="button" class="dropdown-item text-danger" (click)="remove(c.dept)"><i class="bi bi-trash3 me-2"></i>Delete</button></li>
+                </ul>
+              </div>
+            </div>
+
+            <p class="small text-body-secondary text-truncate-2 mb-3">{{ c.dept.description || 'No description.' }}</p>
+
+            <div class="d-flex align-items-center gap-2 mb-3">
+              @if (c.head) {
+                <app-avatar [name]="c.head.firstName + ' ' + c.head.lastName" size="sm" />
+                <div class="min-w-0">
+                  <a [routerLink]="['/employees', c.head.id]" class="small fw-medium d-block text-truncate text-body">{{ c.head.firstName }} {{ c.head.lastName }}</a>
+                  <div class="fs-xs text-body-secondary">Department head</div>
+                </div>
+              } @else {
+                <span class="small text-body-secondary"><i class="bi bi-person-dash me-1"></i>No head assigned</span>
+              }
+            </div>
+
+            <div class="row g-2 mt-auto text-center">
+              <div class="col-4">
+                <div class="stat-tile">
+                  <div class="fw-semibold">{{ c.count }}</div>
+                  <div class="fs-xs text-body-secondary">People</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="stat-tile">
+                  <div class="fw-semibold">{{ c.dept.budget | compact: 'USD' }}</div>
+                  <div class="fs-xs text-body-secondary">Budget</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="stat-tile">
+                  <div class="fw-semibold" [class.text-danger-emphasis]="c.payroll > c.dept.budget">
+                    {{ c.dept.budget ? ((c.payroll / c.dept.budget) * 100).toFixed(0) : 0 }}%
+                  </div>
+                  <div class="fs-xs text-body-secondary">Utilised</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <div class="col-12">
+        <div class="card"><app-empty-state icon="bi-diagram-3" title="No departments match your search" /></div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Create / edit -->
+<app-modal #modal [title]="editing() ? 'Edit department' : 'New department'" size="lg" [staticBackdrop]="true">
+  <form [formGroup]="form" id="deptForm" (ngSubmit)="save()" novalidate>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label for="dName" class="form-label required">Name</label>
+        <input id="dName" class="form-control" formControlName="name" [class.is-invalid]="invalid('name')" />
+        <app-field-error [control]="form.controls.name" label="Name" />
+      </div>
+      <div class="col-md-4">
+        <label for="dCode" class="form-label required">Code</label>
+        <input id="dCode" class="form-control text-uppercase" formControlName="code" maxlength="5" placeholder="ENG"
+               [class.is-invalid]="invalid('code')" />
+        <app-field-error [control]="form.controls.code" label="Code (2–5 letters)" />
+      </div>
+      <div class="col-12">
+        <label for="dDesc" class="form-label">Description</label>
+        <textarea id="dDesc" rows="2" class="form-control" formControlName="description"></textarea>
+      </div>
+      <div class="col-md-6">
+        <label for="dHead" class="form-label">Department head</label>
+        <select id="dHead" class="form-select" formControlName="headId">
+          <option value="">Not assigned</option>
+          @for (e of headOptions(); track e.id) {
+            <option [value]="e.id">{{ e.firstName }} {{ e.lastName }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="dLoc" class="form-label required">Location</label>
+        <input id="dLoc" class="form-control" formControlName="location" [class.is-invalid]="invalid('location')" />
+        <app-field-error [control]="form.controls.location" label="Location" />
+      </div>
+      <div class="col-md-6">
+        <label for="dBudget" class="form-label required">Annual budget</label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input id="dBudget" type="number" min="0" step="1000" class="form-control" formControlName="budget"
+                 [class.is-invalid]="invalid('budget')" />
+        </div>
+        <app-field-error [control]="form.controls.budget" label="Budget" />
+      </div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="modal.close()">Cancel</button>
+    <button type="submit" form="deptForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      {{ editing() ? 'Save changes' : 'Create department' }}
+    </button>
+  </ng-container>
+</app-modal>
