@@ -1,0 +1,208 @@
+<app-page-header title="Settings" subtitle="Manage your profile, preferences and account security." />
+
+<div class="row g-3">
+  <!-- Side nav (stacks into a horizontal list on small screens) -->
+  <div class="col-12 col-lg-3">
+    <div class="card">
+      <div class="card-body p-2">
+        @if (auth.user(); as user) {
+          <div class="d-flex align-items-center gap-2 p-2 mb-2 border-bottom pb-3 d-none d-lg-flex">
+            <app-avatar [name]="user.name" />
+            <div class="min-w-0">
+              <div class="fw-semibold text-truncate">{{ user.name }}</div>
+              <div class="small text-body-secondary text-truncate">{{ roleLabels[user.role] }}</div>
+            </div>
+          </div>
+        }
+        <nav class="nav nav-pills flex-row flex-lg-column gap-1 flex-nowrap overflow-x-auto settings-nav">
+          @for (t of tabs(); track t.key) {
+            <button type="button" class="nav-link text-start text-nowrap" [class.active]="tab() === t.key" (click)="tab.set(t.key)">
+              <i class="bi {{ t.icon }} me-2"></i>{{ t.label }}
+            </button>
+          }
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    @switch (tab()) {
+      @case ('profile') {
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Contact details</h2>
+              <div class="small text-body-secondary">Job, salary and other HR-managed fields can only be changed by HR.</div>
+            </div>
+          </div>
+          <div class="card-body">
+            @if (auth.user(); as user) {
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label" for="sName">Full name</label>
+                  <input id="sName" class="form-control" [value]="user.name" disabled />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="sEmail">Work email</label>
+                  <input id="sEmail" class="form-control" [value]="user.email" disabled />
+                </div>
+              </div>
+            }
+            <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="sPhone" class="form-label required">Phone</label>
+                  <input id="sPhone" type="tel" class="form-control" formControlName="phone"
+                         [class.is-invalid]="profileForm.controls.phone.touched && profileForm.controls.phone.invalid" />
+                  <app-field-error [control]="profileForm.controls.phone" label="Phone" />
+                </div>
+                <div class="col-md-6">
+                  <label for="sAddr" class="form-label required">Street address</label>
+                  <input id="sAddr" class="form-control" formControlName="address"
+                         [class.is-invalid]="profileForm.controls.address.touched && profileForm.controls.address.invalid" />
+                  <app-field-error [control]="profileForm.controls.address" label="Address" />
+                </div>
+                <div class="col-md-6">
+                  <label for="sCity" class="form-label required">City</label>
+                  <input id="sCity" class="form-control" formControlName="city" />
+                </div>
+                <div class="col-md-6">
+                  <label for="sCountry" class="form-label required">Country</label>
+                  <input id="sCountry" class="form-control" formControlName="country" />
+                </div>
+                <div class="col-12"><h3 class="form-section-title mt-2 mb-0">Emergency contact</h3></div>
+                <div class="col-md-4">
+                  <label for="sEName" class="form-label">Name</label>
+                  <input id="sEName" class="form-control" formControlName="emergencyName" />
+                </div>
+                <div class="col-md-4">
+                  <label for="sERel" class="form-label">Relationship</label>
+                  <input id="sERel" class="form-control" formControlName="emergencyRelation" />
+                </div>
+                <div class="col-md-4">
+                  <label for="sEPhone" class="form-label">Phone</label>
+                  <input id="sEPhone" type="tel" class="form-control" formControlName="emergencyPhone" />
+                </div>
+              </div>
+              <div class="d-flex justify-content-end mt-4">
+                <button type="submit" class="btn btn-primary" [disabled]="savingProfile() || profileForm.pristine">
+                  @if (savingProfile()) {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                  }
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      @case ('preferences') {
+        <div class="card mb-3">
+          <div class="card-header"><h2 class="card-title">Appearance</h2></div>
+          <div class="card-body">
+            <div class="row g-3">
+              @for (t of themes; track t.value) {
+                <div class="col-12 col-sm-4">
+                  <input type="radio" class="btn-check" name="theme" [id]="'theme-' + t.value" [checked]="prefs.theme() === t.value"
+                         (change)="prefs.theme.set(t.value)" />
+                  <label class="theme-option w-100" [for]="'theme-' + t.value">
+                    <span class="theme-preview" [attr.data-preview]="t.value"></span>
+                    <span class="d-flex align-items-center gap-2 fw-medium mt-2"><i class="bi {{ t.icon }}"></i>{{ t.label }}</span>
+                  </label>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Layout</h2></div>
+          <div class="card-body">
+            <div class="form-check form-switch">
+              <input id="compactSidebar" type="checkbox" role="switch" class="form-check-input"
+                     [checked]="prefs.sidebarCollapsed()" (change)="prefs.sidebarCollapsed.set($any($event.target).checked)" />
+              <label for="compactSidebar" class="form-check-label">
+                Compact sidebar
+                <span class="d-block small text-body-secondary">Show only icons in the navigation on large screens.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('security') {
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Change password</h2></div>
+          <div class="card-body">
+            @if (passwordError()) {
+              <div class="alert alert-danger py-2" animate.enter="anim-fade-up"><i class="bi bi-exclamation-circle me-1"></i>{{ passwordError() }}</div>
+            }
+            <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate style="max-width: 460px">
+              <div class="mb-3">
+                <label for="pCur" class="form-label required">Current password</label>
+                <input id="pCur" type="password" class="form-control" formControlName="currentPassword" autocomplete="current-password"
+                       [class.is-invalid]="passwordForm.controls.currentPassword.touched && passwordForm.controls.currentPassword.invalid" />
+                <app-field-error [control]="passwordForm.controls.currentPassword" label="Current password" />
+              </div>
+              <div class="mb-3">
+                <label for="pNew" class="form-label required">New password</label>
+                <input id="pNew" type="password" class="form-control" formControlName="newPassword" autocomplete="new-password"
+                       [class.is-invalid]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid" />
+                <div class="form-text">At least 8 characters, including a letter and a number.</div>
+                <app-field-error [control]="passwordForm.controls.newPassword" label="New password" />
+              </div>
+              <div class="mb-4">
+                <label for="pConf" class="form-label required">Confirm new password</label>
+                <input id="pConf" type="password" class="form-control" formControlName="confirmPassword" autocomplete="new-password"
+                       [class.is-invalid]="passwordForm.controls.confirmPassword.touched && passwordForm.controls.confirmPassword.invalid" />
+                <app-field-error [control]="passwordForm.controls.confirmPassword" label="Confirmation" />
+              </div>
+              <button type="submit" class="btn btn-primary" [disabled]="savingPassword()">
+                @if (savingPassword()) {
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                Update password
+              </button>
+            </form>
+          </div>
+        </div>
+      }
+
+      @case ('system') {
+        <div class="card mb-3">
+          <div class="card-header"><h2 class="card-title">Environment</h2></div>
+          <div class="card-body">
+            <dl class="row mb-0 small">
+              <dt class="col-sm-4 text-body-secondary fw-medium">Application</dt><dd class="col-sm-8">{{ env.appName }} v1.0.0</dd>
+              <dt class="col-sm-4 text-body-secondary fw-medium">API endpoint</dt><dd class="col-sm-8"><code>{{ env.apiUrl }}</code></dd>
+              <dt class="col-sm-4 text-body-secondary fw-medium">Data source</dt>
+              <dd class="col-sm-8">
+                @if (env.useMockApi) {
+                  <span class="badge bg-warning-subtle text-warning-emphasis">In-browser mock API</span>
+                  <div class="text-body-secondary mt-1">Data is stored in this browser's localStorage.</div>
+                } @else {
+                  <span class="badge bg-success-subtle text-success-emphasis">Live API</span>
+                }
+              </dd>
+            </dl>
+          </div>
+        </div>
+        <div class="card border-danger-subtle">
+          <div class="card-header"><h2 class="card-title text-danger-emphasis">Danger zone</h2></div>
+          <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div>
+              <div class="fw-medium">Reset demo data</div>
+              <div class="small text-body-secondary">Restore every record to the original sample dataset.</div>
+            </div>
+            <button type="button" class="btn btn-outline-danger" (click)="resetData()" [disabled]="resetting()">
+              @if (resetting()) {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+              }
+              Reset data
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
