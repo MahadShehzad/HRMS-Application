@@ -1,0 +1,77 @@
+<div class="d-lg-none d-flex align-items-center gap-2 mb-4">
+  <svg width="32" height="32" viewBox="0 0 80 80" aria-hidden="true">
+    <circle cx="40" cy="40" r="34" fill="none" stroke="var(--bs-primary)" stroke-width="6" />
+    <circle cx="40" cy="30" r="8" fill="var(--bs-primary)" />
+    <path d="M27 58c2-8 7-12 13-12s11 4 13 12z" fill="var(--bs-primary)" />
+  </svg>
+  <span class="fs-5 fw-bold">PeopleCore</span>
+</div>
+
+<h2 class="h3 mb-1">Welcome back</h2>
+<p class="text-body-secondary mb-4">Sign in to your workspace to continue.</p>
+
+@if (error()) {
+  <div class="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert" animate.enter="anim-fade-up">
+    <i class="bi bi-exclamation-circle"></i>{{ error() }}
+  </div>
+}
+
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="mb-3">
+    <label for="email" class="form-label">Work email</label>
+    <div class="input-icon">
+      <i class="bi bi-envelope"></i>
+      <input id="email" type="email" class="form-control form-control-lg fs-6" formControlName="email"
+             autocomplete="username" placeholder="you@company.com"
+             [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid" />
+    </div>
+    <app-field-error [control]="form.controls.email" label="Email" />
+  </div>
+
+  <div class="mb-3">
+    <div class="d-flex justify-content-between">
+      <label for="password" class="form-label">Password</label>
+      <a routerLink="/auth/forgot-password" class="small">Forgot password?</a>
+    </div>
+    <div class="input-group">
+      <span class="input-group-text bg-transparent"><i class="bi bi-lock"></i></span>
+      <input id="password" class="form-control form-control-lg fs-6 border-start-0" formControlName="password"
+             [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password" placeholder="••••••••"
+             [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid" />
+      <button type="button" class="btn btn-outline-secondary border" (click)="showPassword.set(!showPassword())"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+        <i class="bi" [class]="showPassword() ? 'bi-eye-slash' : 'bi-eye'"></i>
+      </button>
+    </div>
+    <app-field-error [control]="form.controls.password" label="Password" />
+  </div>
+
+  <div class="form-check mb-4">
+    <input id="remember" type="checkbox" class="form-check-input" formControlName="remember" />
+    <label for="remember" class="form-check-label">Keep me signed in for 30 days</label>
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-lg w-100 fs-6" [disabled]="submitting()">
+    @if (submitting()) {
+      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Signing in…
+    } @else {
+      Sign in
+    }
+  </button>
+</form>
+
+<div class="position-relative text-center my-4">
+  <hr />
+  <span class="position-absolute top-50 start-50 translate-middle px-3 bg-body small text-body-secondary">Demo accounts</span>
+</div>
+
+<div class="row g-2">
+  @for (a of demoAccounts; track a.email) {
+    <div class="col-4">
+      <button type="button" class="btn btn-outline-secondary border w-100 py-2 small" (click)="useDemo(a)">
+        <i class="bi {{ a.icon }} d-block fs-5 mb-1"></i>
+        <span class="small">{{ a.role }}</span>
+      </button>
+    </div>
+  }
+</div>
