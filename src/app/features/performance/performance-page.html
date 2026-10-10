@@ -1,0 +1,269 @@
+<app-page-header title="Performance"
+                 [subtitle]="auth.isManager() ? 'Quarterly reviews, goals and ratings across the company.' : 'Your reviews, goals and feedback.'">
+  @if (auth.isManager()) {
+    <button type="button" class="btn btn-primary" (click)="openCreate()" [disabled]="!loaded()"><i class="bi bi-plus-lg me-1"></i>New review</button>
+  }
+</app-page-header>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Reviews" icon="bi-clipboard-check" [value]="stats().total" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Average rating" icon="bi-star" tone="warning" [value]="stats().avg" [decimals]="1" [loading]="!loaded()" hint="Out of 5.0" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Acknowledged" icon="bi-check2-circle" tone="success" [value]="stats().completed" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Exceeding expectations" icon="bi-rocket-takeoff" tone="info" [value]="stats().top" [loading]="!loaded()" hint="Rated 4 or 5" />
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12" [class.col-xxl-8]="auth.isManager()">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="d-flex flex-wrap gap-2 w-100">
+          @if (auth.isManager()) {
+            <div class="input-icon flex-grow-1" style="max-width: 240px">
+              <i class="bi bi-search"></i>
+              <input type="search" class="form-control" placeholder="Search employee…" aria-label="Search"
+                     [value]="search()" (input)="search.set($any($event.target).value)" />
+            </div>
+            <select class="form-select w-auto" aria-label="Department" [value]="deptFilter()" (change)="deptFilter.set($any($event.target).value)">
+              <option value="">All departments</option>
+              @for (d of departments.items(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          }
+          <select class="form-select w-auto" aria-label="Period" [value]="periodFilter()" (change)="periodFilter.set($any($event.target).value)">
+            <option value="">All periods</option>
+            @for (p of periods(); track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+          <select class="form-select w-auto" aria-label="Status" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)">
+            <option value="">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
+            <option value="acknowledged">Acknowledged</option>
+          </select>
+        </div>
+      </div>
+
+      @if (!loaded()) {
+        <app-skeleton variant="table" [rows]="6" [cols]="5" />
+      } @else if (!visible().length) {
+        <app-empty-state icon="bi-graph-up-arrow" title="No reviews found"
+                         [message]="auth.isManager() ? 'Create a review to start tracking performance.' : 'Your manager has not shared a review with you yet.'" />
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-hr table-hover">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Period</th>
+                <th>Rating</th>
+                <th class="d-none d-lg-table-cell" style="min-width: 140px">Goals</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of visible(); track r.id) {
+                <tr class="cursor-pointer" (click)="openView(r)">
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <app-avatar [name]="nameOf(r.employeeId)" size="sm" />
+                      <span class="min-w-0">
+                        <span class="d-block fw-medium text-truncate">{{ nameOf(r.employeeId) }}</span>
+                        <span class="d-block small text-body-secondary text-truncate">{{ designationOf(r.employeeId) }}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td class="text-nowrap">{{ r.period }}</td>
+                  <td class="text-nowrap"><app-rating [value]="r.rating" /></td>
+                  <td class="d-none d-lg-table-cell">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height: 6px" role="progressbar" aria-label="Average goal progress"
+                           [attr.aria-valuenow]="avgProgress(r)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" [style.width.%]="avgProgress(r)"></div>
+                      </div>
+                      <span class="small text-body-secondary tabular-nums">{{ avgProgress(r) }}%</span>
+                    </div>
+                  </td>
+                  <td><app-status-badge [status]="r.status" /></td>
+                  <td class="text-end text-nowrap" (click)="$event.stopPropagation()">
+                    @if (auth.isManager()) {
+                      <button type="button" class="btn btn-sm btn-light border-0" (click)="openEdit(r)" aria-label="Edit review"><i class="bi bi-pencil"></i></button>
+                      <button type="button" class="btn btn-sm btn-light border-0 text-danger" (click)="remove(r)" aria-label="Delete review"><i class="bi bi-trash3"></i></button>
+                    } @else if (r.status === 'submitted') {
+                      <button type="button" class="btn btn-sm btn-outline-success" (click)="acknowledge(r)">Acknowledge</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (auth.isManager()) {
+    <div class="col-12 col-xxl-4">
+      <div class="card h-100">
+        <div class="card-header"><h2 class="card-title">Rating distribution</h2></div>
+        <div class="card-body">
+          @if (loaded()) {
+            <app-bar-list-chart [data]="distribution()" [sort]="false" />
+          } @else {
+            <app-skeleton variant="list" [rows]="5" />
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- View review -->
+<app-modal #viewModal title="Performance review" size="lg">
+  @if (viewing(); as r) {
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <app-avatar [name]="nameOf(r.employeeId)" size="lg" />
+      <div class="flex-grow-1">
+        <a [routerLink]="['/employees', r.employeeId]" class="fw-semibold fs-5 text-body" (click)="viewModal.close()">{{ nameOf(r.employeeId) }}</a>
+        <div class="small text-body-secondary">{{ r.period }} · reviewed by {{ nameOf(r.reviewerId) }} · {{ r.createdOn | date: 'mediumDate' }}</div>
+      </div>
+      <app-status-badge [status]="r.status" />
+    </div>
+    <div class="d-flex align-items-center gap-2 p-3 rounded bg-body-tertiary mb-4">
+      <app-rating [value]="r.rating" />
+      <span class="fw-semibold">{{ r.rating }}/5</span>
+      <span class="text-body-secondary">· {{ ratingLabels[r.rating] }}</span>
+    </div>
+    <h3 class="form-section-title">Goals</h3>
+    @for (g of r.goals; track g.title) {
+      <div class="mb-3">
+        <div class="d-flex justify-content-between small mb-1"><span>{{ g.title }}</span><span class="fw-semibold">{{ g.progress }}%</span></div>
+        <div class="progress" role="progressbar" [attr.aria-label]="g.title" [attr.aria-valuenow]="g.progress" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar" [class.bg-success]="g.progress >= 100" [style.width.%]="g.progress"></div>
+        </div>
+      </div>
+    }
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <h3 class="form-section-title text-success-emphasis"><i class="bi bi-hand-thumbs-up me-1"></i>Strengths</h3>
+        <p class="small mb-0">{{ r.strengths }}</p>
+      </div>
+      <div class="col-md-6">
+        <h3 class="form-section-title text-warning-emphasis"><i class="bi bi-bullseye me-1"></i>Focus areas</h3>
+        <p class="small mb-0">{{ r.improvements }}</p>
+      </div>
+    </div>
+  }
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="viewModal.close()">Close</button>
+    @if (viewing(); as r) {
+      @if (auth.isManager()) {
+        <button type="button" class="btn btn-primary" (click)="openEdit(r)"><i class="bi bi-pencil me-1"></i>Edit</button>
+      } @else if (r.status === 'submitted') {
+        <button type="button" class="btn btn-success" (click)="acknowledge(r)"><i class="bi bi-check2 me-1"></i>Acknowledge</button>
+      }
+    }
+  </ng-container>
+</app-modal>
+
+<!-- Create / edit review -->
+<app-modal #formModal [title]="editing() ? 'Edit review' : 'New performance review'" size="lg" [staticBackdrop]="true">
+  <form [formGroup]="form" id="reviewForm" (ngSubmit)="save()" novalidate>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label for="rEmp" class="form-label required">Employee</label>
+        <select id="rEmp" class="form-select" formControlName="employeeId"
+                [class.is-invalid]="form.controls.employeeId.touched && form.controls.employeeId.invalid">
+          <option value="" disabled>Select employee…</option>
+          @for (e of employeeOptions(); track e.id) {
+            <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} — {{ e.designation }}</option>
+          }
+        </select>
+        <app-field-error [control]="form.controls.employeeId" label="Employee" />
+      </div>
+      <div class="col-md-4">
+        <label for="rPeriod" class="form-label required">Period</label>
+        <input id="rPeriod" class="form-control" formControlName="period" placeholder="2026-Q3"
+               [class.is-invalid]="form.controls.period.touched && form.controls.period.invalid" />
+        <app-field-error [control]="form.controls.period" label="Period (YYYY-Q#)" />
+      </div>
+      <div class="col-md-8">
+        <span class="form-label d-block required">Overall rating</span>
+        <div class="d-flex align-items-center gap-2">
+          <app-rating [readonly]="false" [value]="form.controls.rating.value" (valueChange)="form.controls.rating.setValue($event)" />
+          <span class="small text-body-secondary">{{ ratingLabels[form.controls.rating.value] }}</span>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="rStatus" class="form-label">Status</label>
+        <select id="rStatus" class="form-select" formControlName="status">
+          <option value="draft">Draft</option>
+          <option value="submitted">Submitted</option>
+          @if (editing()?.status === 'acknowledged') {
+            <option value="acknowledged">Acknowledged</option>
+          }
+        </select>
+      </div>
+
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="form-label mb-0">Goals</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" (click)="addGoal()"><i class="bi bi-plus-lg me-1"></i>Add goal</button>
+        </div>
+        <div formArrayName="goals" class="d-grid gap-2">
+          @for (g of goals.controls; track g; let i = $index) {
+            <div class="row g-2 align-items-center" [formGroupName]="i" animate.enter="anim-fade-up">
+              <div class="col">
+                <input class="form-control form-control-sm" formControlName="title" placeholder="Goal description" [attr.aria-label]="'Goal ' + (i + 1)"
+                       [class.is-invalid]="g.get('title')?.touched && g.get('title')?.invalid" />
+              </div>
+              <div class="col-auto" style="width: 110px">
+                <div class="input-group input-group-sm">
+                  <input type="number" min="0" max="100" class="form-control" formControlName="progress" aria-label="Progress" />
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+              <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-light border-0 text-danger" (click)="removeGoal(i)" [disabled]="goals.length === 1" aria-label="Remove goal">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="rStr" class="form-label required">Strengths</label>
+        <textarea id="rStr" rows="3" class="form-control" formControlName="strengths"
+                  [class.is-invalid]="form.controls.strengths.touched && form.controls.strengths.invalid"></textarea>
+        <app-field-error [control]="form.controls.strengths" label="Strengths" />
+      </div>
+      <div class="col-md-6">
+        <label for="rImp" class="form-label required">Focus areas</label>
+        <textarea id="rImp" rows="3" class="form-control" formControlName="improvements"
+                  [class.is-invalid]="form.controls.improvements.touched && form.controls.improvements.invalid"></textarea>
+        <app-field-error [control]="form.controls.improvements" label="Focus areas" />
+      </div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="formModal.close()">Cancel</button>
+    <button type="submit" form="reviewForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      {{ editing() ? 'Save changes' : 'Create review' }}
+    </button>
+  </ng-container>
+</app-modal>
