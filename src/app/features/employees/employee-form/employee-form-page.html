@@ -1,0 +1,196 @@
+<app-page-header [title]="title()"
+                 [subtitle]="isEdit() ? 'Update profile, job and payroll details.' : 'Create a profile for a new team member.'"
+                 [breadcrumbs]="[{ label: 'Employees', link: '/employees' }, { label: isEdit() ? 'Edit' : 'New' }]" />
+
+@if (!ready()) {
+  <app-skeleton variant="cards" [rows]="2" colClass="col-12" />
+} @else if (isEdit() && !existing()) {
+  <div class="alert alert-warning">This employee could not be found. <a routerLink="/employees">Back to list</a></div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="row g-3">
+      <div class="col-12 col-xl-8">
+        <!-- Personal -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <h2 class="form-section-title"><i class="bi bi-person me-2"></i>Personal information</h2>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="firstName" class="form-label required">First name</label>
+                <input id="firstName" class="form-control" formControlName="firstName" [class.is-invalid]="invalid('firstName')" />
+                <app-field-error [control]="form.controls.firstName" label="First name" />
+              </div>
+              <div class="col-md-6">
+                <label for="lastName" class="form-label required">Last name</label>
+                <input id="lastName" class="form-control" formControlName="lastName" [class.is-invalid]="invalid('lastName')" />
+                <app-field-error [control]="form.controls.lastName" label="Last name" />
+              </div>
+              <div class="col-md-6">
+                <label for="email" class="form-label required">Work email</label>
+                <input id="email" type="email" class="form-control" formControlName="email" [class.is-invalid]="invalid('email')" />
+                <app-field-error [control]="form.controls.email" label="Email" />
+              </div>
+              <div class="col-md-6">
+                <label for="phone" class="form-label required">Phone</label>
+                <input id="phone" type="tel" class="form-control" formControlName="phone" placeholder="+1 (555) 123-4567"
+                       [class.is-invalid]="invalid('phone')" />
+                <app-field-error [control]="form.controls.phone" label="Phone" />
+              </div>
+              <div class="col-md-6">
+                <label for="dob" class="form-label required">Date of birth</label>
+                <input id="dob" type="date" class="form-control" formControlName="dateOfBirth" [class.is-invalid]="invalid('dateOfBirth')" />
+                <app-field-error [control]="form.controls.dateOfBirth" label="Date of birth" />
+              </div>
+              <div class="col-md-6">
+                <span class="form-label d-block required">Gender</span>
+                <div class="btn-group w-100" role="group" aria-label="Gender">
+                  @for (g of genders; track g) {
+                    <input type="radio" class="btn-check" [id]="'g-' + g" [value]="g" formControlName="gender" />
+                    <label class="btn btn-outline-secondary" [for]="'g-' + g">{{ g | label }}</label>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <h2 class="form-section-title"><i class="bi bi-briefcase me-2"></i>Job details</h2>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="dept" class="form-label required">Department</label>
+                <select id="dept" class="form-select" formControlName="departmentId" [class.is-invalid]="invalid('departmentId')">
+                  <option value="" disabled>Select department…</option>
+                  @for (d of departments.items(); track d.id) {
+                    <option [value]="d.id">{{ d.name }}</option>
+                  }
+                </select>
+                <app-field-error [control]="form.controls.departmentId" label="Department" />
+              </div>
+              <div class="col-md-6">
+                <label for="designation" class="form-label required">Designation</label>
+                <input id="designation" class="form-control" formControlName="designation" placeholder="e.g. Software Engineer"
+                       [class.is-invalid]="invalid('designation')" />
+                <app-field-error [control]="form.controls.designation" label="Designation" />
+              </div>
+              <div class="col-md-6">
+                <label for="manager" class="form-label">Reports to</label>
+                <select id="manager" class="form-select" formControlName="managerId">
+                  <option value="">No manager</option>
+                  @for (m of managers(); track m.id) {
+                    <option [value]="m.id">{{ m.firstName }} {{ m.lastName }} — {{ m.designation }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="joinDate" class="form-label required">Join date</label>
+                <input id="joinDate" type="date" class="form-control" formControlName="joinDate" [class.is-invalid]="invalid('joinDate')" />
+                <app-field-error [control]="form.controls.joinDate" label="Join date" />
+              </div>
+              <div class="col-md-4">
+                <label for="type" class="form-label required">Employment type</label>
+                <select id="type" class="form-select" formControlName="employmentType">
+                  @for (t of types; track t) {
+                    <option [value]="t">{{ t | label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="status" class="form-label required">Status</label>
+                <select id="status" class="form-select" formControlName="status">
+                  @for (s of statuses; track s) {
+                    <option [value]="s">{{ s | label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="salary" class="form-label required">Annual salary</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input id="salary" type="number" min="0" step="500" class="form-control" formControlName="salary"
+                         [class.is-invalid]="invalid('salary')" />
+                </div>
+                <app-field-error [control]="form.controls.salary" label="Salary" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="card">
+          <div class="card-body">
+            <h2 class="form-section-title"><i class="bi bi-geo-alt me-2"></i>Address</h2>
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="address" class="form-label required">Street address</label>
+                <input id="address" class="form-control" formControlName="address" [class.is-invalid]="invalid('address')" />
+                <app-field-error [control]="form.controls.address" label="Address" />
+              </div>
+              <div class="col-md-6">
+                <label for="city" class="form-label required">City</label>
+                <input id="city" class="form-control" formControlName="city" [class.is-invalid]="invalid('city')" />
+                <app-field-error [control]="form.controls.city" label="City" />
+              </div>
+              <div class="col-md-6">
+                <label for="country" class="form-label required">Country</label>
+                <input id="country" class="form-control" formControlName="country" [class.is-invalid]="invalid('country')" />
+                <app-field-error [control]="form.controls.country" label="Country" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-xl-4">
+        <div class="card mb-3">
+          <div class="card-body">
+            <h2 class="form-section-title"><i class="bi bi-telephone-plus me-2"></i>Emergency contact</h2>
+            <div class="mb-3">
+              <label for="eName" class="form-label">Name</label>
+              <input id="eName" class="form-control" formControlName="emergencyName" />
+            </div>
+            <div class="mb-3">
+              <label for="eRel" class="form-label">Relationship</label>
+              <input id="eRel" class="form-control" formControlName="emergencyRelation" placeholder="Spouse, parent…" />
+            </div>
+            <div>
+              <label for="ePhone" class="form-label">Phone</label>
+              <input id="ePhone" type="tel" class="form-control" formControlName="emergencyPhone" [class.is-invalid]="invalid('emergencyPhone')" />
+              <app-field-error [control]="form.controls.emergencyPhone" label="Phone" />
+            </div>
+          </div>
+        </div>
+        <div class="card mb-3">
+          <div class="card-body">
+            <h2 class="form-section-title"><i class="bi bi-stars me-2"></i>Skills & banking</h2>
+            <div class="mb-3">
+              <label for="skills" class="form-label">Skills</label>
+              <input id="skills" class="form-control" formControlName="skills" placeholder="Angular, SQL, Leadership" />
+              <div class="form-text">Separate skills with commas.</div>
+            </div>
+            <div>
+              <label for="bank" class="form-label">Bank account</label>
+              <input id="bank" class="form-control" formControlName="bankAccount" placeholder="**** **** 1234" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky action bar -->
+        <div class="card form-actions">
+          <div class="card-body d-flex gap-2">
+            <a [routerLink]="isEdit() ? ['/employees', id()] : '/employees'" class="btn btn-light border flex-fill">Cancel</a>
+            <button type="submit" class="btn btn-primary flex-fill" [disabled]="saving()">
+              @if (saving()) {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Saving…
+              } @else {
+                <i class="bi bi-check2 me-1"></i>{{ isEdit() ? 'Save changes' : 'Create employee' }}
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+}

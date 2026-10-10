@@ -1,0 +1,164 @@
+<app-page-header title="Employees"
+                 [subtitle]="auth.isManager() ? 'Manage your workforce, roles and reporting lines.' : 'Find and connect with your colleagues.'">
+  <button type="button" class="btn btn-outline-secondary border" (click)="exportCsv()" [disabled]="!employees.loaded()">
+    <i class="bi bi-download me-1"></i>Export
+  </button>
+  @if (auth.isManager()) {
+    <a routerLink="new" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add employee</a>
+  }
+</app-page-header>
+
+<!-- Quick status filters -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <button type="button" class="btn btn-sm rounded-pill" [class]="!statusFilter() ? 'btn-primary' : 'btn-outline-secondary border'"
+          (click)="statusFilter.set('')">All <span class="opacity-75 ms-1">{{ counts().total }}</span></button>
+  <button type="button" class="btn btn-sm rounded-pill" [class]="statusFilter() === 'active' ? 'btn-primary' : 'btn-outline-secondary border'"
+          (click)="statusFilter.set('active')">Active <span class="opacity-75 ms-1">{{ counts().active }}</span></button>
+  <button type="button" class="btn btn-sm rounded-pill" [class]="statusFilter() === 'probation' ? 'btn-primary' : 'btn-outline-secondary border'"
+          (click)="statusFilter.set('probation')">Probation <span class="opacity-75 ms-1">{{ counts().probation }}</span></button>
+  <button type="button" class="btn btn-sm rounded-pill" [class]="statusFilter() === 'on-leave' ? 'btn-primary' : 'btn-outline-secondary border'"
+          (click)="statusFilter.set('on-leave')">On leave <span class="opacity-75 ms-1">{{ counts().onLeave }}</span></button>
+</div>
+
+<div class="card">
+  <!-- Toolbar -->
+  <div class="card-header py-3">
+    <div class="row g-2 align-items-center w-100 mx-0">
+      <div class="col-12 col-md-4 col-xl-3 ps-0">
+        <div class="input-icon">
+          <i class="bi bi-search"></i>
+          <input type="search" class="form-control" placeholder="Search name, email, ID…" aria-label="Search employees"
+                 [value]="search()" (input)="search.set($any($event.target).value)" />
+        </div>
+      </div>
+      <div class="col-6 col-md-3 col-xl-2">
+        <select class="form-select" aria-label="Department" [value]="deptFilter()" (change)="deptFilter.set($any($event.target).value)">
+          <option value="">All departments</option>
+          @for (d of departments.items(); track d.id) {
+            <option [value]="d.id">{{ d.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-6 col-md-3 col-xl-2">
+        <select class="form-select" aria-label="Employment type" [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)">
+          <option value="">All types</option>
+          @for (t of types; track t) {
+            <option [value]="t">{{ t | label }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-md-2 col-xl-5 d-flex justify-content-between justify-content-md-end align-items-center gap-2 pe-0">
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="clearFilters()">
+            <i class="bi bi-x-circle me-1"></i>Clear
+          </button>
+        }
+        <div class="btn-group" role="group" aria-label="View mode">
+          <button type="button" class="btn btn-outline-secondary border" [class.active]="view() === 'table'"
+                  (click)="view.set('table')" appTooltip="Table view" aria-label="Table view"><i class="bi bi-list-ul"></i></button>
+          <button type="button" class="btn btn-outline-secondary border" [class.active]="view() === 'grid'"
+                  (click)="view.set('grid')" appTooltip="Card view" aria-label="Card view"><i class="bi bi-grid-3x3-gap"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (!employees.loaded()) {
+    @if (view() === 'table') {
+      <app-skeleton variant="table" [rows]="8" [cols]="6" />
+    } @else {
+      <div class="card-body"><app-skeleton variant="cards" [rows]="6" colClass="col-12 col-sm-6 col-xl-4 col-xxl-3" /></div>
+    }
+  } @else if (!filtered().length) {
+    <app-empty-state icon="bi-search" title="No employees found" message="Try a different search term or clear the filters.">
+      @if (hasFilters()) {
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="clearFilters()">Clear filters</button>
+      }
+    </app-empty-state>
+  } @else if (view() === 'table') {
+    <div class="table-responsive">
+      <table class="table table-hr table-hover">
+        <thead>
+          <tr>
+            <th class="th-sortable" (click)="toggleSort('name')">Employee <i class="bi {{ sortIcon('name') }} ms-1"></i></th>
+            <th class="th-sortable d-none d-md-table-cell" (click)="toggleSort('code')">ID <i class="bi {{ sortIcon('code') }} ms-1"></i></th>
+            <th class="th-sortable" (click)="toggleSort('department')">Department <i class="bi {{ sortIcon('department') }} ms-1"></i></th>
+            <th class="th-sortable d-none d-lg-table-cell" (click)="toggleSort('designation')">Role <i class="bi {{ sortIcon('designation') }} ms-1"></i></th>
+            <th class="th-sortable d-none d-xl-table-cell" (click)="toggleSort('joinDate')">Joined <i class="bi {{ sortIcon('joinDate') }} ms-1"></i></th>
+            <th class="th-sortable" (click)="toggleSort('status')">Status <i class="bi {{ sortIcon('status') }} ms-1"></i></th>
+            <th class="text-end"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of paged(); track e.id) {
+            <tr>
+              <td>
+                <a [routerLink]="e.id" class="d-flex align-items-center gap-2 text-body text-decoration-none">
+                  <app-avatar [name]="e.firstName + ' ' + e.lastName" size="sm" />
+                  <span class="min-w-0">
+                    <span class="d-block fw-medium text-truncate">{{ e.firstName }} {{ e.lastName }}</span>
+                    <span class="d-block small text-body-secondary text-truncate">{{ e.email }}</span>
+                  </span>
+                </a>
+              </td>
+              <td class="d-none d-md-table-cell text-body-secondary small">{{ e.code }}</td>
+              <td>{{ deptName(e.departmentId) }}</td>
+              <td class="d-none d-lg-table-cell">
+                {{ e.designation }}
+                <div class="small text-body-secondary">{{ e.employmentType | label }}</div>
+              </td>
+              <td class="d-none d-xl-table-cell text-nowrap">{{ e.joinDate | date: 'mediumDate' }}</td>
+              <td><app-status-badge [status]="e.status" /></td>
+              <td class="text-end">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-light border-0" data-bs-toggle="dropdown" aria-expanded="false"
+                          data-bs-popper-config='{"strategy":"fixed"}' [attr.aria-label]="'Actions for ' + e.firstName">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" [routerLink]="e.id"><i class="bi bi-person me-2"></i>View profile</a></li>
+                    @if (auth.isManager()) {
+                      <li><a class="dropdown-item" [routerLink]="[e.id, 'edit']"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li><button type="button" class="dropdown-item text-danger" (click)="remove(e)"><i class="bi bi-trash3 me-2"></i>Delete</button></li>
+                    } @else {
+                      <li><a class="dropdown-item" [href]="'mailto:' + e.email"><i class="bi bi-envelope me-2"></i>Send email</a></li>
+                    }
+                  </ul>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="card-body">
+      <div class="row g-3">
+        @for (e of paged(); track e.id) {
+          <div class="col-12 col-sm-6 col-xl-4 col-xxl-3">
+            <a [routerLink]="e.id" class="card card-interactive h-100 text-decoration-none text-body employee-card">
+              <div class="card-body text-center">
+                <div class="position-absolute top-0 end-0 m-2"><app-status-badge [status]="e.status" /></div>
+                <app-avatar [name]="e.firstName + ' ' + e.lastName" size="lg" class="mb-2" />
+                <div class="fw-semibold text-truncate">{{ e.firstName }} {{ e.lastName }}</div>
+                <div class="small text-body-secondary text-truncate mb-2">{{ e.designation }}</div>
+                <span class="badge bg-primary-subtle text-primary-emphasis">{{ deptName(e.departmentId) }}</span>
+              </div>
+              <div class="card-footer bg-transparent small text-body-secondary d-flex justify-content-between gap-2">
+                <span class="text-truncate"><i class="bi bi-envelope me-1"></i>{{ e.email }}</span>
+                <span class="text-nowrap">{{ e.code }}</span>
+              </div>
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (employees.loaded() && filtered().length) {
+    <div class="card-footer bg-transparent py-3">
+      <app-pagination [total]="filtered().length" [(page)]="page" [(pageSize)]="pageSize" />
+    </div>
+  }
+</div>

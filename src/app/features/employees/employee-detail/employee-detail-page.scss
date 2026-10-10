@@ -1,0 +1,46 @@
+@use 'mixins' as *;
+
+.profile-cover {
+  height: 96px;
+  background:
+    radial-gradient(500px 120px at 20% 0%, rgba(124, 147, 255, 0.55), transparent 70%),
+    linear-gradient(120deg, var(--bs-primary), #3046c5 60%, #1e293b);
+}
+
+.profile-head {
+  margin-top: -2.5rem;
+}
+
+.border-body-bg {
+  border-color: var(--bs-body-bg) !important;
+}
+
+.info-list {
+  dt {
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+  }
+
+  dd {
+    margin-bottom: 0.75rem;
+  }
+
+  @include media-down(sm) {
+    dt {
+      margin-bottom: 0.125rem;
+    }
+  }
+}
+
+.reports-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.nav-underline {
+  scrollbar-width: none;
+
+  .nav-link {
+    padding-block: 0.875rem;
+  }
+}

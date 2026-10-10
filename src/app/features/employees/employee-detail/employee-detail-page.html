@@ -1,0 +1,293 @@
+@if (!employees.loaded()) {
+  <div class="card mb-3">
+    <div class="card-body d-flex gap-3 align-items-center">
+      <span class="skeleton skeleton-circle" style="width: 5rem; height: 5rem"></span>
+      <div class="flex-grow-1">
+        <span class="skeleton skeleton-title"></span>
+        <span class="skeleton skeleton-text" style="width: 30%"></span>
+      </div>
+    </div>
+  </div>
+  <app-skeleton variant="cards" [rows]="2" colClass="col-12 col-lg-6" />
+} @else if (!employee()) {
+  <div class="card">
+    <app-empty-state icon="bi-person-x" title="Employee not found" message="This profile doesn't exist or has been removed.">
+      <a routerLink="/employees" class="btn btn-sm btn-primary">Back to employees</a>
+    </app-empty-state>
+  </div>
+} @else {
+  @let e = employee()!;
+  <app-page-header [title]="name()" [breadcrumbs]="[{ label: 'Employees', link: '/employees' }, { label: name() }]">
+    @if (auth.isManager()) {
+      <button type="button" class="btn btn-outline-danger" (click)="remove()"><i class="bi bi-trash3 me-1"></i>Delete</button>
+      <a [routerLink]="['/employees', e.id, 'edit']" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Edit profile</a>
+    }
+  </app-page-header>
+
+  <!-- Profile header -->
+  <div class="card mb-3 overflow-hidden">
+    <div class="profile-cover"></div>
+    <div class="card-body pt-0">
+      <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-3 profile-head">
+        <app-avatar [name]="name()" size="xl" class="border border-4 border-body-bg shadow-sm" />
+        <div class="text-center text-md-start flex-grow-1 min-w-0">
+          <h2 class="h4 mb-1">{{ name() }}</h2>
+          <div class="text-body-secondary">{{ e.designation }} · {{ department()?.name }}</div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+          <app-status-badge [status]="e.status" />
+          <span class="badge rounded-pill bg-body-secondary text-body-secondary">{{ e.code }}</span>
+          <span class="badge rounded-pill bg-body-secondary text-body-secondary">{{ e.employmentType | label }}</span>
+        </div>
+      </div>
+      <div class="row g-3 mt-2 text-center text-md-start small">
+        <div class="col-6 col-md-3"><i class="bi bi-envelope text-body-secondary me-2"></i><a [href]="'mailto:' + e.email" class="text-break">{{ e.email }}</a></div>
+        <div class="col-6 col-md-3"><i class="bi bi-telephone text-body-secondary me-2"></i>{{ e.phone }}</div>
+        <div class="col-6 col-md-3"><i class="bi bi-geo-alt text-body-secondary me-2"></i>{{ e.city }}, {{ e.country }}</div>
+        <div class="col-6 col-md-3"><i class="bi bi-calendar3 text-body-secondary me-2"></i>Joined {{ e.joinDate | date: 'mediumDate' }}</div>
+      </div>
+    </div>
+    <ul class="nav nav-underline px-3 border-top flex-nowrap overflow-x-auto overflow-y-hidden" role="tablist">
+      @for (t of tabs(); track t.key) {
+        <li class="nav-item" role="presentation">
+          <button type="button" class="nav-link text-nowrap" role="tab" [class.active]="tab() === t.key"
+                  [attr.aria-selected]="tab() === t.key" (click)="tab.set(t.key)">
+            <i class="bi {{ t.icon }} me-1"></i>{{ t.label }}
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+
+  @switch (tab()) {
+    @case ('overview') {
+      <div class="row g-3">
+        <div class="col-12 col-xl-8">
+          <div class="card mb-3">
+            <div class="card-header"><h3 class="card-title">Job information</h3></div>
+            <div class="card-body">
+              <dl class="row mb-0 info-list">
+                <dt class="col-sm-4">Department</dt><dd class="col-sm-8">{{ department()?.name }}</dd>
+                <dt class="col-sm-4">Designation</dt><dd class="col-sm-8">{{ e.designation }}</dd>
+                <dt class="col-sm-4">Employment type</dt><dd class="col-sm-8">{{ e.employmentType | label }}</dd>
+                <dt class="col-sm-4">Reports to</dt>
+                <dd class="col-sm-8">
+                  @if (manager(); as m) {
+                    <a [routerLink]="['/employees', m.id]" class="d-inline-flex align-items-center gap-2">
+                      <app-avatar [name]="m.firstName + ' ' + m.lastName" size="xs" />{{ m.firstName }} {{ m.lastName }}
+                    </a>
+                  } @else { — }
+                </dd>
+                <dt class="col-sm-4">Join date</dt><dd class="col-sm-8">{{ e.joinDate | date: 'longDate' }} <span class="text-body-secondary">({{ tenure() }})</span></dd>
+                @if (canSeePrivate()) {
+                  <dt class="col-sm-4">Annual salary</dt><dd class="col-sm-8 fw-semibold">{{ e.salary | currency: 'USD' : 'symbol' : '1.0-0' }}</dd>
+                  <dt class="col-sm-4">Bank account</dt><dd class="col-sm-8">{{ e.bankAccount }}</dd>
+                }
+              </dl>
+            </div>
+          </div>
+
+          @if (canSeePrivate()) {
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Personal details</h3></div>
+              <div class="card-body">
+                <dl class="row mb-0 info-list">
+                  <dt class="col-sm-4">Date of birth</dt><dd class="col-sm-8">{{ e.dateOfBirth | date: 'longDate' }} <span class="text-body-secondary">({{ age() }} years)</span></dd>
+                  <dt class="col-sm-4">Gender</dt><dd class="col-sm-8">{{ e.gender | label }}</dd>
+                  <dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ e.address }}, {{ e.city }}, {{ e.country }}</dd>
+                  <dt class="col-sm-4">Emergency contact</dt>
+                  <dd class="col-sm-8">{{ e.emergencyContact.name }} ({{ e.emergencyContact.relation }}) · {{ e.emergencyContact.phone }}</dd>
+                </dl>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="col-12 col-xl-4">
+          <div class="card mb-3">
+            <div class="card-header"><h3 class="card-title">Skills</h3></div>
+            <div class="card-body d-flex flex-wrap gap-2">
+              @for (s of e.skills; track s) {
+                <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-medium px-3 py-2">{{ s }}</span>
+              } @empty {
+                <span class="small text-body-secondary">No skills listed.</span>
+              }
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Direct reports</h3>
+              <span class="badge bg-body-secondary text-body-secondary">{{ reports().length }}</span>
+            </div>
+            <ul class="list-group list-group-flush reports-list">
+              @for (r of reports(); track r.id) {
+                <li class="list-group-item">
+                  <a [routerLink]="['/employees', r.id]" class="d-flex align-items-center gap-2 text-body">
+                    <app-avatar [name]="r.firstName + ' ' + r.lastName" size="sm" />
+                    <span class="min-w-0">
+                      <span class="d-block small fw-medium text-truncate">{{ r.firstName }} {{ r.lastName }}</span>
+                      <span class="d-block fs-xs text-body-secondary text-truncate">{{ r.designation }}</span>
+                    </span>
+                  </a>
+                </li>
+              } @empty {
+                <li class="list-group-item small text-body-secondary">No direct reports.</li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    }
+
+    @case ('attendance') {
+      @if (!attendanceRecords()) {
+        <div class="card"><app-skeleton variant="table" [rows]="6" [cols]="5" /></div>
+      } @else {
+        @let s = attendanceSummary();
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-md"><div class="card card-body py-3"><div class="small text-body-secondary">Present</div><div class="fs-5 fw-semibold">{{ s.present }}</div></div></div>
+          <div class="col-6 col-md"><div class="card card-body py-3"><div class="small text-body-secondary">Late</div><div class="fs-5 fw-semibold">{{ s.late }}</div></div></div>
+          <div class="col-6 col-md"><div class="card card-body py-3"><div class="small text-body-secondary">Absent</div><div class="fs-5 fw-semibold">{{ s.absent }}</div></div></div>
+          <div class="col-6 col-md"><div class="card card-body py-3"><div class="small text-body-secondary">On leave</div><div class="fs-5 fw-semibold">{{ s.leave }}</div></div></div>
+          <div class="col-12 col-md"><div class="card card-body py-3"><div class="small text-body-secondary">Avg. hours</div><div class="fs-5 fw-semibold">{{ s.avgHours | number: '1.1-1' }}h</div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Last 30 days</h3></div>
+          @if (attendanceRecords()!.length) {
+            <div class="table-responsive">
+              <table class="table table-hr table-sm">
+                <thead><tr><th>Date</th><th>Check in</th><th>Check out</th><th>Hours</th><th>Status</th></tr></thead>
+                <tbody>
+                  @for (r of attendanceRecords(); track r.id) {
+                    <tr>
+                      <td class="text-nowrap">{{ r.date | date: 'EEE, MMM d' }}</td>
+                      <td>{{ r.checkIn ?? '—' }}</td>
+                      <td>{{ r.checkOut ?? '—' }}</td>
+                      <td>{{ r.hours ? (r.hours | number: '1.1-1') + 'h' : '—' }}</td>
+                      <td><app-status-badge [status]="r.status" /></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-empty-state icon="bi-calendar-x" title="No attendance records" />
+          }
+        </div>
+      }
+    }
+
+    @case ('leave') {
+      @if (!leaves.loaded()) {
+        <app-skeleton variant="cards" [rows]="4" colClass="col-6 col-lg-3" />
+      } @else {
+        <div class="row g-3 mb-3">
+          @for (b of balances(); track b.config.type) {
+            @if (b.config.entitlement !== null) {
+              <div class="col-6 col-lg-3">
+                <div class="card card-body py-3">
+                  <div class="d-flex align-items-center gap-2 small text-body-secondary mb-1">
+                    <i class="bi {{ b.config.icon }} text-{{ b.config.tone }}"></i>{{ b.config.label }}
+                  </div>
+                  <div class="fs-5 fw-semibold">{{ b.remaining }} <span class="fs-6 fw-normal text-body-secondary">/ {{ b.config.entitlement }} days</span></div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Leave history</h3></div>
+          @if (myLeaves().length) {
+            <div class="table-responsive">
+              <table class="table table-hr">
+                <thead><tr><th>Type</th><th>Dates</th><th>Days</th><th class="d-none d-md-table-cell">Reason</th><th>Status</th></tr></thead>
+                <tbody>
+                  @for (l of myLeaves(); track l.id) {
+                    <tr>
+                      <td>{{ l.type | label }}</td>
+                      <td class="text-nowrap">{{ l.startDate | date: 'MMM d' }} – {{ l.endDate | date: 'MMM d, y' }}</td>
+                      <td>{{ l.days }}</td>
+                      <td class="d-none d-md-table-cell text-body-secondary small">{{ l.reason }}</td>
+                      <td><app-status-badge [status]="l.status" /></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-empty-state icon="bi-airplane" title="No leave taken yet" />
+          }
+        </div>
+      }
+    }
+
+    @case ('payroll') {
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Payslips</h3></div>
+        @if (!payroll.loaded()) {
+          <app-skeleton variant="table" [rows]="3" [cols]="5" />
+        } @else if (payslips().length) {
+          <div class="table-responsive">
+            <table class="table table-hr table-hover">
+              <thead><tr><th>Period</th><th class="text-end">Gross</th><th class="text-end d-none d-sm-table-cell">Deductions</th><th class="text-end">Net pay</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                @for (p of payslips(); track p.id) {
+                  <tr>
+                    <td class="fw-medium">{{ p.period + '-01' | date: 'MMMM y' }}</td>
+                    <td class="text-end">{{ p.gross | currency }}</td>
+                    <td class="text-end d-none d-sm-table-cell text-danger-emphasis">−{{ p.totalDeductions | currency }}</td>
+                    <td class="text-end fw-semibold">{{ p.net | currency }}</td>
+                    <td><app-status-badge [status]="p.status" /></td>
+                    <td class="text-end"><a [routerLink]="['/payroll/payslips', p.id]" class="btn btn-sm btn-outline-secondary border">View</a></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <app-empty-state icon="bi-receipt" title="No payslips yet" message="Payslips appear here once payroll has been run." />
+        }
+      </div>
+    }
+
+    @case ('performance') {
+      @if (!performance.loaded()) {
+        <app-skeleton variant="cards" [rows]="2" colClass="col-12 col-lg-6" />
+      } @else {
+        <div class="row g-3">
+          @for (r of reviews(); track r.id) {
+            <div class="col-12 col-lg-6">
+              <div class="card h-100">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">{{ r.period }} review</h3>
+                    <div class="small text-body-secondary">Reviewed by {{ nameOf(r.reviewerId) }}</div>
+                  </div>
+                  <app-status-badge [status]="r.status" />
+                </div>
+                <div class="card-body">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <app-rating [value]="r.rating" />
+                    <span class="small fw-medium">{{ ratingLabels[r.rating] }}</span>
+                  </div>
+                  @for (g of r.goals; track g.title) {
+                    <div class="mb-2">
+                      <div class="d-flex justify-content-between small mb-1"><span>{{ g.title }}</span><span class="fw-semibold">{{ g.progress }}%</span></div>
+                      <div class="progress" role="progressbar" [attr.aria-valuenow]="g.progress" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="g.title">
+                        <div class="progress-bar" [style.width.%]="g.progress"></div>
+                      </div>
+                    </div>
+                  }
+                  <div class="small mt-3"><strong>Strengths:</strong> {{ r.strengths }}</div>
+                  <div class="small"><strong>Focus areas:</strong> {{ r.improvements }}</div>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="col-12"><div class="card"><app-empty-state icon="bi-graph-up" title="No reviews yet" /></div></div>
+          }
+        </div>
+      }
+    }
+  }
+}
