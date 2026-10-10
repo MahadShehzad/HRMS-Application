@@ -1,0 +1,52 @@
+<aside class="app-sidebar offcanvas-lg offcanvas-start" id="appSidebar" tabindex="-1"
+       aria-label="Main navigation" [class.is-collapsed]="collapsed()">
+  <div class="sidebar-inner">
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <a routerLink="/dashboard" class="d-flex align-items-center gap-2 text-decoration-none min-w-0">
+        <svg class="brand-mark" viewBox="0 0 80 80" aria-hidden="true">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" stroke-width="6" />
+          <circle cx="40" cy="30" r="8" fill="currentColor" />
+          <circle cx="25" cy="46" r="6.5" fill="#7c93ff" />
+          <circle cx="55" cy="46" r="6.5" fill="#a5b4fc" />
+          <path d="M27 58c2-8 7-12 13-12s11 4 13 12z" fill="currentColor" />
+        </svg>
+        <span class="brand-name">People<span>Core</span></span>
+      </a>
+      <button type="button" class="btn-close btn-close-white d-lg-none ms-auto"
+              data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Close menu"></button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      @for (group of groups(); track group.title) {
+        <div class="nav-group-title">{{ group.title }}</div>
+        <ul class="nav flex-column mb-2">
+          @for (item of group.items; track item.route) {
+            <li class="nav-item">
+              <a class="nav-link" [routerLink]="item.route" routerLinkActive="active"
+                 [appTooltip]="collapsed() ? item.label : ''" placement="right">
+                <i class="bi {{ item.icon }}"></i>
+                <span class="nav-label">{{ item.label }}</span>
+                @if (badgeFor(item.badge); as count) {
+                  <span class="badge rounded-pill text-bg-warning ms-auto nav-badge">{{ count }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </nav>
+
+    <!-- Signed-in user -->
+    @if (auth.user(); as user) {
+      <div class="sidebar-user">
+        <app-avatar [name]="user.name" size="sm" />
+        <div class="min-w-0 user-meta">
+          <div class="text-white small fw-semibold text-truncate">{{ user.name }}</div>
+          <div class="fs-xs text-truncate">{{ roleLabels[user.role] }}</div>
+        </div>
+      </div>
+    }
+  </div>
+</aside>

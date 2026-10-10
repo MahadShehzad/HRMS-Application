@@ -1,0 +1,149 @@
+@use 'mixins' as *;
+
+.app-sidebar {
+  --bs-offcanvas-width: var(--hr-sidebar-width);
+  --bs-offcanvas-bg: var(--hr-sidebar-bg);
+  --bs-offcanvas-border-width: 0;
+
+  @include media-up(lg) {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1030;
+    width: var(--hr-sidebar-width);
+    transition: width 0.2s var(--hr-ease-out);
+
+    &.is-collapsed {
+      width: var(--hr-sidebar-collapsed-width);
+    }
+  }
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--hr-sidebar-bg);
+  color: var(--hr-sidebar-color);
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  height: var(--hr-topbar-height);
+  padding: 0 1.25rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  a {
+    color: #fff;
+  }
+}
+
+.brand-mark {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  color: var(--bs-primary);
+}
+
+.brand-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+
+  span {
+    color: #7c93ff;
+  }
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 0.75rem;
+}
+
+.nav-group-title {
+  padding: 0.5rem 0.75rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.6);
+  white-space: nowrap;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 2px;
+  border-radius: var(--bs-border-radius);
+  color: var(--hr-sidebar-color);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  .bi {
+    font-size: 1.1rem;
+    width: 1.25rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    color: #fff;
+    background: var(--hr-sidebar-hover-bg);
+  }
+
+  &.active {
+    color: var(--hr-sidebar-active);
+    background: var(--bs-primary);
+    box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.35);
+  }
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+// ---- Collapsed icon rail (desktop only) ------------------------------------
+@include media-up(lg) {
+  .is-collapsed {
+    .brand-name,
+    .nav-label,
+    .nav-badge,
+    .user-meta {
+      display: none;
+    }
+
+    .sidebar-brand,
+    .sidebar-user {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    .nav-group-title {
+      font-size: 0;
+      padding: 0.5rem 0;
+      margin: 0 0.75rem 0.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-link {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+}

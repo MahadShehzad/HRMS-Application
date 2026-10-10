@@ -1,0 +1,117 @@
+<header class="app-topbar">
+  <!-- Menu toggles -->
+  <button type="button" class="btn btn-icon d-lg-none" data-bs-toggle="offcanvas"
+          data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Open menu">
+    <i class="bi bi-list fs-4"></i>
+  </button>
+  <button type="button" class="btn btn-icon d-none d-lg-inline-flex" (click)="prefs.toggleSidebar()"
+          [attr.aria-label]="prefs.sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'">
+    <i class="bi fs-5" [class]="prefs.sidebarCollapsed() ? 'bi-layout-sidebar' : 'bi-layout-sidebar-inset'"></i>
+  </button>
+
+  <!-- Global search -->
+  <div class="topbar-search d-none d-md-block position-relative">
+    <div class="input-icon">
+      <i class="bi bi-search"></i>
+      <input #search type="search" class="form-control bg-body-tertiary border-0"
+             placeholder="Search people or pages…" aria-label="Search"
+             [value]="query()" (input)="query.set($any($event.target).value)"
+             (focus)="searchOpen.set(true)" (blur)="blurLater()"
+             (keydown.enter)="go(results()[0])" (keydown.escape)="closeSearch()" />
+      <kbd class="search-kbd">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+    </div>
+    @if (searchOpen() && query().length >= 2) {
+      <div class="search-results dropdown-menu show shadow-lg w-100" animate.enter="anim-scale-in">
+        @for (r of results(); track r.link) {
+          <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" (mousedown)="go(r)">
+            @if (r.avatar) {
+              <app-avatar [name]="r.avatar" size="xs" />
+            } @else {
+              <i class="bi {{ r.icon }} text-body-secondary"></i>
+            }
+            <span class="min-w-0">
+              <span class="d-block text-truncate fw-medium">{{ r.label }}</span>
+              <span class="d-block text-truncate fs-xs text-body-secondary">{{ r.sub }}</span>
+            </span>
+          </button>
+        } @empty {
+          <div class="px-3 py-2 small text-body-secondary">No matches for “{{ query() }}”</div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="ms-auto d-flex align-items-center gap-1">
+    <!-- Theme -->
+    <button type="button" class="btn btn-icon" (click)="prefs.toggleTheme()"
+            [attr.aria-label]="prefs.resolvedTheme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      <i class="bi fs-5" [class]="prefs.resolvedTheme() === 'dark' ? 'bi-sun' : 'bi-moon-stars'"></i>
+    </button>
+
+    <!-- Notifications -->
+    <div class="dropdown">
+      <button type="button" class="btn btn-icon position-relative" data-bs-toggle="dropdown"
+              data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications">
+        <i class="bi bi-bell fs-5"></i>
+        @if (notificationCount()) {
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notif-badge">
+            {{ notificationCount() > 9 ? '9+' : notificationCount() }}
+          </span>
+        }
+      </button>
+      <div class="dropdown-menu dropdown-menu-end p-0 notif-menu">
+        <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Notifications</span>
+          <span class="badge bg-primary-subtle text-primary-emphasis">{{ notificationCount() }} new</span>
+        </div>
+        <div class="notif-list">
+          @for (l of pendingLeaves(); track l.id) {
+            <a routerLink="/leave" [queryParams]="{ tab: 'approvals' }" class="dropdown-item d-flex gap-2 py-2 text-wrap">
+              <app-avatar [name]="nameOf(l.employeeId)" size="sm" />
+              <span class="small">
+                <strong>{{ nameOf(l.employeeId) }}</strong> requested {{ l.days }} day(s) of {{ l.type }} leave
+                <span class="d-block fs-xs text-body-secondary">Applied {{ l.appliedOn | relativeDate }}</span>
+              </span>
+            </a>
+          }
+          @for (a of recentNews(); track a.id) {
+            <a routerLink="/company" class="dropdown-item d-flex gap-2 py-2 text-wrap">
+              <span class="icon-box icon-box-sm bg-info-subtle text-info-emphasis rounded-circle"><i class="bi bi-megaphone"></i></span>
+              <span class="small">
+                {{ a.title }}
+                <span class="d-block fs-xs text-body-secondary">{{ a.publishedOn | relativeDate }}</span>
+              </span>
+            </a>
+          }
+          @if (!notificationCount()) {
+            <div class="text-center text-body-secondary small py-4">You're all caught up 🎉</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- User menu -->
+    @if (auth.user(); as user) {
+      <div class="dropdown ms-1">
+        <button type="button" class="btn d-flex align-items-center gap-2 px-1 border-0" data-bs-toggle="dropdown" aria-expanded="false">
+          <app-avatar [name]="user.name" size="sm" />
+          <span class="d-none d-sm-block text-start lh-sm">
+            <span class="d-block small fw-semibold">{{ user.name }}</span>
+            <span class="d-block fs-xs text-body-secondary">{{ roleLabels[user.role] }}</span>
+          </span>
+          <i class="bi bi-chevron-down small text-body-secondary d-none d-sm-inline"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li class="px-3 py-2 d-sm-none">
+            <div class="fw-semibold small">{{ user.name }}</div>
+            <div class="fs-xs text-body-secondary">{{ user.email }}</div>
+          </li>
+          <li><a class="dropdown-item" [routerLink]="['/employees', user.employeeId]"><i class="bi bi-person me-2"></i>My profile</a></li>
+          <li><a class="dropdown-item" routerLink="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
+          <li><hr class="dropdown-divider" /></li>
+          <li><button type="button" class="dropdown-item text-danger" (click)="auth.logout()"><i class="bi bi-box-arrow-right me-2"></i>Sign out</button></li>
+        </ul>
+      </div>
+    }
+  </div>
+</header>

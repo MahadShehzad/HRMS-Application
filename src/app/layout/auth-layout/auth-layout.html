@@ -1,0 +1,44 @@
+<div class="container-fluid p-0">
+  <div class="row g-0 min-vh-100">
+    <!-- Brand panel -->
+    <div class="col-lg-6 col-xl-5 d-none d-lg-flex auth-brand">
+      <div class="d-flex flex-column justify-content-between p-5 w-100 position-relative">
+        <div class="d-flex align-items-center gap-2 text-white">
+          <svg width="36" height="36" viewBox="0 0 80 80" aria-hidden="true">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#fff" stroke-width="6" />
+            <circle cx="40" cy="30" r="8" fill="#fff" />
+            <circle cx="25" cy="46" r="6.5" fill="#c7d2fe" />
+            <circle cx="55" cy="46" r="6.5" fill="#e0e7ff" />
+            <path d="M27 58c2-8 7-12 13-12s11 4 13 12z" fill="#fff" />
+          </svg>
+          <span class="fs-4 fw-bold">PeopleCore</span>
+        </div>
+
+        <div>
+          <h1 class="display-6 fw-semibold text-white mb-3">Everything your people team needs, in one place.</h1>
+          <p class="text-white-50 mb-5 fs-6">A modern HRMS for growing companies.</p>
+          <ul class="list-unstyled d-grid gap-4 mb-0">
+            @for (h of highlights; track h.title) {
+              <li class="d-flex gap-3">
+                <span class="icon-box rounded-3 bg-white bg-opacity-10 text-white"><i class="bi {{ h.icon }}"></i></span>
+                <span>
+                  <span class="d-block text-white fw-semibold">{{ h.title }}</span>
+                  <span class="d-block text-white-50 small">{{ h.text }}</span>
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="text-white-50 small">Trusted by 1,200+ HR teams worldwide</div>
+      </div>
+    </div>
+
+    <!-- Form panel -->
+    <div class="col-12 col-lg-6 col-xl-7 d-flex align-items-center justify-content-center p-4 p-sm-5 bg-body">
+      <div class="w-100" style="max-width: 420px">
+        <router-outlet />
+      </div>
+    </div>
+  </div>
+</div>
