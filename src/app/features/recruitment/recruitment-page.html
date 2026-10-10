@@ -1,0 +1,277 @@
+<app-page-header title="Recruitment" subtitle="Job openings and your hiring pipeline.">
+  <button type="button" class="btn btn-outline-secondary border" (click)="openCandidate()" [disabled]="!loaded()">
+    <i class="bi bi-person-plus me-1"></i>Add candidate
+  </button>
+  <button type="button" class="btn btn-primary" (click)="openJob()"><i class="bi bi-plus-lg me-1"></i>New job</button>
+</app-page-header>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Open jobs" icon="bi-briefcase" [value]="stats().openJobs" [loading]="!loaded()" [hint]="stats().openings + ' positions to fill'" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Active candidates" icon="bi-people" tone="info" [value]="stats().active" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="In interviews" icon="bi-chat-square-dots" tone="warning" [value]="stats().interviews" [loading]="!loaded()" />
+  </div>
+  <div class="col-6 col-xl-3">
+    <app-stat-card label="Hired" icon="bi-trophy" tone="success" [value]="stats().hired" [loading]="!loaded()" />
+  </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <ul class="nav nav-pills gap-1">
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="tab() === 'pipeline'" (click)="tab.set('pipeline')"><i class="bi bi-kanban me-1"></i>Pipeline</button></li>
+    <li class="nav-item"><button type="button" class="nav-link" [class.active]="tab() === 'jobs'" (click)="tab.set('jobs')"><i class="bi bi-briefcase me-1"></i>Job openings</button></li>
+  </ul>
+  @if (tab() === 'pipeline') {
+    <select class="form-select w-auto" aria-label="Filter by job" [value]="jobFilter()" (change)="jobFilter.set($any($event.target).value)">
+      <option value="">All jobs</option>
+      @for (j of jobs.items(); track j.id) {
+        <option [value]="j.id">{{ j.title }}</option>
+      }
+    </select>
+  }
+</div>
+
+@if (!loaded()) {
+  <app-skeleton variant="cards" [rows]="3" />
+} @else if (tab() === 'pipeline') {
+  <!-- Kanban -->
+  <div class="kanban">
+    @for (col of columns(); track col.stage) {
+      <section class="kanban-col" [class.drop-target]="dropTarget() === col.stage"
+               (dragover)="onDragOver($event, col.stage)" (dragleave)="dropTarget.set(null)" (drop)="onDrop($event, col.stage)"
+               [attr.aria-label]="col.label + ' stage'">
+        <header class="kanban-head">
+          <span class="status-dot text-{{ col.tone }}"></span>
+          <span class="fw-semibold small">{{ col.label }}</span>
+          <span class="badge rounded-pill bg-body-secondary text-body-secondary ms-auto">{{ col.items.length }}</span>
+        </header>
+        <div class="kanban-body">
+          @for (c of col.items; track c.id) {
+            <article class="card kanban-card" draggable="true" [class.is-dragging]="dragging()?.id === c.id"
+                     (dragstart)="onDragStart($event, c)" (dragend)="onDragEnd()">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-start gap-2 mb-2">
+                  <app-avatar [name]="c.name" size="sm" />
+                  <div class="min-w-0 flex-grow-1">
+                    <div class="fw-medium small text-truncate">{{ c.name }}</div>
+                    <div class="fs-xs text-body-secondary text-truncate">{{ jobTitle(c.jobId) }}</div>
+                  </div>
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-link text-body-secondary p-0" data-bs-toggle="dropdown"
+                            data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" [attr.aria-label]="'Actions for ' + c.name">
+                      <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><h6 class="dropdown-header">Move to</h6></li>
+                      @for (s of stages; track s.stage) {
+                        @if (s.stage !== c.stage) {
+                          <li><button type="button" class="dropdown-item small" (click)="move(c, s.stage)"><span class="status-dot text-{{ s.tone }} me-2"></span>{{ s.label }}</button></li>
+                        }
+                      }
+                      <li><hr class="dropdown-divider" /></li>
+                      <li><a class="dropdown-item small" [href]="'mailto:' + c.email"><i class="bi bi-envelope me-2"></i>Email</a></li>
+                      <li><button type="button" class="dropdown-item small text-danger" (click)="removeCandidate(c)"><i class="bi bi-trash3 me-2"></i>Remove</button></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center fs-xs text-body-secondary">
+                  <app-rating [value]="c.rating" />
+                  <span>{{ c.experienceYears }}y exp</span>
+                </div>
+                <div class="d-flex justify-content-between fs-xs text-body-secondary mt-1">
+                  <span><i class="bi bi-link-45deg"></i> {{ c.source }}</span>
+                  <span>{{ c.appliedOn | relativeDate }}</span>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <div class="kanban-empty">Drop candidates here</div>
+          }
+        </div>
+      </section>
+    }
+  </div>
+  <p class="small text-body-secondary mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Drag cards between stages, or use the <i class="bi bi-three-dots"></i> menu.</p>
+} @else {
+  <!-- Jobs -->
+  <div class="row g-3">
+    @for (j of jobCards(); track j.job.id) {
+      <div class="col-12 col-md-6 col-xxl-4">
+        <div class="card h-100" [class.opacity-75]="j.job.status === 'closed'">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-start gap-2 mb-2">
+              <div class="min-w-0 flex-grow-1">
+                <h3 class="h6 mb-1">{{ j.job.title }}</h3>
+                <div class="small text-body-secondary">{{ deptName(j.job.departmentId) }} · {{ j.job.location }}</div>
+              </div>
+              <app-status-badge [status]="j.job.status" />
+            </div>
+            <p class="small text-body-secondary text-truncate-2 mb-3">{{ j.job.description }}</p>
+            <div class="d-flex flex-wrap gap-2 mb-3 small">
+              <span class="badge bg-body-secondary text-body-secondary">{{ j.job.employmentType | label }}</span>
+              <span class="badge bg-body-secondary text-body-secondary">{{ j.job.experience }}</span>
+              <span class="badge bg-body-secondary text-body-secondary">{{ j.job.salaryMin | compact: 'USD' }} – {{ j.job.salaryMax | compact: 'USD' }}</span>
+              <span class="badge bg-body-secondary text-body-secondary">{{ j.job.openings }} opening{{ j.job.openings > 1 ? 's' : '' }}</span>
+            </div>
+            <div class="row g-2 text-center mb-3">
+              <div class="col-4"><div class="p-2 rounded bg-body-tertiary"><div class="fw-semibold">{{ j.applicants }}</div><div class="fs-xs text-body-secondary">Applicants</div></div></div>
+              <div class="col-4"><div class="p-2 rounded bg-body-tertiary"><div class="fw-semibold">{{ j.inProgress }}</div><div class="fs-xs text-body-secondary">In progress</div></div></div>
+              <div class="col-4"><div class="p-2 rounded bg-body-tertiary"><div class="fw-semibold">{{ j.hired }}</div><div class="fs-xs text-body-secondary">Hired</div></div></div>
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-auto">
+              <span class="small text-body-secondary me-auto">Closes {{ j.job.closingOn | relativeDate }}</span>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="viewPipeline(j.job)">Pipeline</button>
+              <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><button type="button" class="dropdown-item" (click)="openJob(j.job)"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+                  @if (j.job.status !== 'open') {
+                    <li><button type="button" class="dropdown-item" (click)="setJobStatus(j.job, 'open')"><i class="bi bi-play-circle me-2"></i>Reopen</button></li>
+                  }
+                  @if (j.job.status === 'open') {
+                    <li><button type="button" class="dropdown-item" (click)="setJobStatus(j.job, 'on-hold')"><i class="bi bi-pause-circle me-2"></i>Put on hold</button></li>
+                  }
+                  @if (j.job.status !== 'closed') {
+                    <li><button type="button" class="dropdown-item" (click)="setJobStatus(j.job, 'closed')"><i class="bi bi-stop-circle me-2"></i>Close</button></li>
+                  }
+                  <li><hr class="dropdown-divider" /></li>
+                  <li><button type="button" class="dropdown-item text-danger" (click)="removeJob(j.job)"><i class="bi bi-trash3 me-2"></i>Delete</button></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <div class="col-12"><div class="card"><app-empty-state icon="bi-briefcase" title="No job openings" message="Publish your first role to start receiving candidates." /></div></div>
+    }
+  </div>
+}
+
+<!-- Job modal -->
+<app-modal #jobModal [title]="editingJob() ? 'Edit job opening' : 'New job opening'" size="lg" [staticBackdrop]="true">
+  <form [formGroup]="jobForm" id="jobForm" (ngSubmit)="saveJob()" novalidate>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label for="jTitle" class="form-label required">Job title</label>
+        <input id="jTitle" class="form-control" formControlName="title" [class.is-invalid]="jobForm.controls.title.touched && jobForm.controls.title.invalid" />
+        <app-field-error [control]="jobForm.controls.title" label="Title" />
+      </div>
+      <div class="col-md-4">
+        <label for="jOpen" class="form-label required">Openings</label>
+        <input id="jOpen" type="number" min="1" class="form-control" formControlName="openings" />
+      </div>
+      <div class="col-md-6">
+        <label for="jDept" class="form-label required">Department</label>
+        <select id="jDept" class="form-select" formControlName="departmentId" [class.is-invalid]="jobForm.controls.departmentId.touched && jobForm.controls.departmentId.invalid">
+          <option value="" disabled>Select…</option>
+          @for (d of departments.items(); track d.id) {
+            <option [value]="d.id">{{ d.name }}</option>
+          }
+        </select>
+        <app-field-error [control]="jobForm.controls.departmentId" label="Department" />
+      </div>
+      <div class="col-md-6">
+        <label for="jLoc" class="form-label required">Location</label>
+        <input id="jLoc" class="form-control" formControlName="location" placeholder="e.g. Remote, New York"
+               [class.is-invalid]="jobForm.controls.location.touched && jobForm.controls.location.invalid" />
+        <app-field-error [control]="jobForm.controls.location" label="Location" />
+      </div>
+      <div class="col-md-4">
+        <label for="jType" class="form-label">Type</label>
+        <select id="jType" class="form-select" formControlName="employmentType">
+          @for (t of types; track t) {
+            <option [value]="t">{{ t | label }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="jExp" class="form-label">Experience</label>
+        <input id="jExp" class="form-control" formControlName="experience" />
+      </div>
+      <div class="col-md-4">
+        <label for="jClose" class="form-label required">Closing date</label>
+        <input id="jClose" type="date" class="form-control" formControlName="closingOn" />
+      </div>
+      <div class="col-md-6">
+        <label for="jMin" class="form-label required">Salary from</label>
+        <div class="input-group"><span class="input-group-text">$</span><input id="jMin" type="number" class="form-control" formControlName="salaryMin" /></div>
+      </div>
+      <div class="col-md-6">
+        <label for="jMax" class="form-label required">Salary to</label>
+        <div class="input-group"><span class="input-group-text">$</span><input id="jMax" type="number" class="form-control" formControlName="salaryMax" /></div>
+      </div>
+      <div class="col-12">
+        <label for="jDesc" class="form-label">Description</label>
+        <textarea id="jDesc" rows="3" class="form-control" formControlName="description"></textarea>
+      </div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="jobModal.close()">Cancel</button>
+    <button type="submit" form="jobForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      {{ editingJob() ? 'Save changes' : 'Publish job' }}
+    </button>
+  </ng-container>
+</app-modal>
+
+<!-- Candidate modal -->
+<app-modal #candidateModal title="Add candidate" [staticBackdrop]="true">
+  <form [formGroup]="candidateForm" id="candForm" (ngSubmit)="saveCandidate()" novalidate>
+    <div class="row g-3">
+      <div class="col-12">
+        <label for="cName" class="form-label required">Full name</label>
+        <input id="cName" class="form-control" formControlName="name" [class.is-invalid]="candidateForm.controls.name.touched && candidateForm.controls.name.invalid" />
+        <app-field-error [control]="candidateForm.controls.name" label="Name" />
+      </div>
+      <div class="col-md-6">
+        <label for="cEmail" class="form-label required">Email</label>
+        <input id="cEmail" type="email" class="form-control" formControlName="email" [class.is-invalid]="candidateForm.controls.email.touched && candidateForm.controls.email.invalid" />
+        <app-field-error [control]="candidateForm.controls.email" label="Email" />
+      </div>
+      <div class="col-md-6">
+        <label for="cPhone" class="form-label">Phone</label>
+        <input id="cPhone" type="tel" class="form-control" formControlName="phone" />
+      </div>
+      <div class="col-12">
+        <label for="cJob" class="form-label required">Applying for</label>
+        <select id="cJob" class="form-select" formControlName="jobId">
+          @for (j of jobs.items(); track j.id) {
+            <option [value]="j.id">{{ j.title }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-6">
+        <label for="cSource" class="form-label">Source</label>
+        <select id="cSource" class="form-select" formControlName="source">
+          @for (s of ['LinkedIn', 'Referral', 'Careers page', 'Indeed', 'Agency', 'Glassdoor']; track s) {
+            <option [value]="s">{{ s }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-6">
+        <label for="cExp" class="form-label">Years of experience</label>
+        <input id="cExp" type="number" min="0" class="form-control" formControlName="experienceYears" />
+      </div>
+      <div class="col-12">
+        <span class="form-label d-block">Initial rating</span>
+        <app-rating [readonly]="false" [value]="candidateForm.controls.rating.value" (valueChange)="candidateForm.controls.rating.setValue($event)" />
+      </div>
+      <div class="col-12">
+        <label for="cNotes" class="form-label">Notes</label>
+        <textarea id="cNotes" rows="2" class="form-control" formControlName="notes"></textarea>
+      </div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="candidateModal.close()">Cancel</button>
+    <button type="submit" form="candForm" class="btn btn-primary" [disabled]="saving()">Add to pipeline</button>
+  </ng-container>
+</app-modal>
