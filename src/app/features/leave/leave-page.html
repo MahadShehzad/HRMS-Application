@@ -1,0 +1,293 @@
+<app-page-header title="Leave" subtitle="Balances, requests and approvals.">
+  <button type="button" class="btn btn-primary" (click)="openApply()"><i class="bi bi-plus-lg me-1"></i>Request leave</button>
+</app-page-header>
+
+@if (auth.isManager()) {
+  <ul class="nav nav-pills mb-3 gap-1">
+    <li class="nav-item">
+      <button type="button" class="nav-link" [class.active]="tab() === 'my'" (click)="tab.set('my')">My leave</button>
+    </li>
+    <li class="nav-item">
+      <button type="button" class="nav-link d-flex align-items-center gap-2" [class.active]="tab() === 'approvals'" (click)="tab.set('approvals')">
+        Approvals
+        @if (leaves.pending().length) {
+          <span class="badge rounded-pill" [class]="tab() === 'approvals' ? 'bg-white text-primary' : 'text-bg-warning'">{{ leaves.pending().length }}</span>
+        }
+      </button>
+    </li>
+    <li class="nav-item">
+      <button type="button" class="nav-link" [class.active]="tab() === 'all'" (click)="tab.set('all')">All requests</button>
+    </li>
+  </ul>
+}
+
+@switch (tab()) {
+  @case ('my') {
+    <!-- Balances -->
+    <div class="row g-3 mb-3">
+      @for (b of balances(); track b.config.type) {
+        <div class="col-6 col-md-4 col-xl">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="icon-box icon-box-sm bg-{{ b.config.tone }}-subtle text-{{ b.config.tone }}-emphasis"><i class="bi {{ b.config.icon }}"></i></span>
+                <span class="small fw-medium">{{ b.config.label }}</span>
+              </div>
+              @if (!leaves.loaded()) {
+                <span class="skeleton" style="height: 1.5rem; width: 50%"></span>
+              } @else if (b.config.entitlement !== null) {
+                <div class="fs-4 fw-semibold lh-1">{{ b.remaining }}<span class="fs-6 text-body-secondary fw-normal"> / {{ b.config.entitlement }}</span></div>
+                <div class="progress mt-2" style="height: 6px" role="progressbar" [attr.aria-label]="b.config.label + ' used'"
+                     [attr.aria-valuenow]="b.used" aria-valuemin="0" [attr.aria-valuemax]="b.config.entitlement">
+                  <div class="progress-bar bg-{{ b.config.tone }}" [style.width.%]="(b.used / b.config.entitlement) * 100"></div>
+                  <div class="progress-bar bg-{{ b.config.tone }} opacity-50" [style.width.%]="(b.pending / b.config.entitlement) * 100"></div>
+                </div>
+                <div class="fs-xs text-body-secondary mt-1">{{ b.used }} used · {{ b.pending }} pending</div>
+              } @else {
+                <div class="fs-4 fw-semibold lh-1">{{ b.used }}<span class="fs-6 text-body-secondary fw-normal"> days</span></div>
+                <div class="fs-xs text-body-secondary mt-2">Taken this year · no limit</div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">My requests</h2></div>
+      @if (!leaves.loaded()) {
+        <app-skeleton variant="table" [rows]="4" [cols]="5" />
+      } @else if (!myRequests().length) {
+        <app-empty-state icon="bi-airplane" title="No leave requests yet" message="When you request time off it will show up here.">
+          <button type="button" class="btn btn-sm btn-primary" (click)="openApply()">Request leave</button>
+        </app-empty-state>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-hr">
+            <thead>
+              <tr><th>Type</th><th>Dates</th><th>Days</th><th class="d-none d-md-table-cell">Reason</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (l of myRequests(); track l.id) {
+                <tr>
+                  <td class="fw-medium">{{ typeLabel(l.type) }}</td>
+                  <td class="text-nowrap">{{ l.startDate | date: 'MMM d' }} – {{ l.endDate | date: 'MMM d, y' }}</td>
+                  <td>{{ l.days }}</td>
+                  <td class="d-none d-md-table-cell small text-body-secondary">
+                    {{ l.reason }}
+                    @if (l.reviewNote) {
+                      <div class="text-danger-emphasis"><i class="bi bi-chat-left-text me-1"></i>{{ l.reviewNote }}</div>
+                    }
+                  </td>
+                  <td><app-status-badge [status]="l.status" /></td>
+                  <td class="text-end">
+                    @if (l.status === 'pending') {
+                      <button type="button" class="btn btn-sm btn-outline-secondary border" (click)="cancel(l)">Cancel</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  @case ('approvals') {
+    @if (!leaves.loaded() || !employees.loaded()) {
+      <app-skeleton variant="cards" [rows]="3" />
+    } @else if (!leaves.pending().length) {
+      <div class="card">
+        <app-empty-state icon="bi-check2-all" title="All caught up" message="There are no leave requests waiting for your review." />
+      </div>
+    } @else {
+      <div class="row g-3">
+        @for (l of leaves.pending(); track l.id) {
+          @let bal = balanceFor(l.employeeId, l.type);
+          <div class="col-12 col-md-6 col-xxl-4" animate.leave="anim-collapse-out">
+            <div class="card h-100">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                  <app-avatar [name]="nameOf(l.employeeId)" />
+                  <div class="min-w-0 flex-grow-1">
+                    <a [routerLink]="['/employees', l.employeeId]" class="fw-semibold d-block text-truncate text-body">{{ nameOf(l.employeeId) }}</a>
+                    <div class="small text-body-secondary text-truncate">{{ deptOf(l.employeeId) }} · applied {{ l.appliedOn | relativeDate }}</div>
+                  </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <span class="badge bg-primary-subtle text-primary-emphasis">{{ typeLabel(l.type) }}</span>
+                  <span class="badge bg-body-secondary text-body-secondary">{{ l.days }} day{{ l.days > 1 ? 's' : '' }}</span>
+                </div>
+                <div class="small mb-1"><i class="bi bi-calendar-range me-2 text-body-secondary"></i>{{ l.startDate | date: 'EEE, MMM d' }} – {{ l.endDate | date: 'EEE, MMM d' }}</div>
+                <div class="small text-body-secondary mb-3"><i class="bi bi-chat-left-quote me-2"></i>{{ l.reason }}</div>
+                @if (bal && bal.remaining !== null) {
+                  <div class="small mb-3 p-2 rounded bg-body-tertiary">
+                    Balance after approval: <strong>{{ bal.remaining }}</strong> of {{ bal.config.entitlement }} days
+                  </div>
+                }
+                <div class="d-flex gap-2 mt-auto">
+                  <button type="button" class="btn btn-success flex-fill" [disabled]="busyId() === l.id" (click)="decide(l, 'approved')">
+                    <i class="bi bi-check-lg me-1"></i>Approve
+                  </button>
+                  <button type="button" class="btn btn-outline-danger flex-fill" [disabled]="busyId() === l.id" (click)="openReview(l)">
+                    <i class="bi bi-x-lg me-1"></i>Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  @case ('all') {
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="d-flex flex-wrap gap-2 w-100">
+          <div class="input-icon flex-grow-1" style="max-width: 280px">
+            <i class="bi bi-search"></i>
+            <input type="search" class="form-control" placeholder="Search employee…" aria-label="Search"
+                   [value]="search()" (input)="search.set($any($event.target).value)" />
+          </div>
+          <select class="form-select w-auto" aria-label="Status" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select class="form-select w-auto" aria-label="Type" [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)">
+            <option value="">All types</option>
+            @for (t of leaveTypes; track t.type) {
+              <option [value]="t.type">{{ t.label }}</option>
+            }
+          </select>
+          <button type="button" class="btn btn-outline-secondary border ms-auto" (click)="exportAll()"><i class="bi bi-download me-1"></i>Export</button>
+        </div>
+      </div>
+      @if (!leaves.loaded() || !employees.loaded()) {
+        <app-skeleton variant="table" [rows]="8" [cols]="6" />
+      } @else if (!allRequests().length) {
+        <app-empty-state icon="bi-search" title="No requests match the filters" />
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-hr table-hover">
+            <thead>
+              <tr><th>Employee</th><th>Type</th><th>Dates</th><th>Days</th><th class="d-none d-lg-table-cell">Applied</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (l of allRequests(); track l.id) {
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <app-avatar [name]="nameOf(l.employeeId)" size="sm" />
+                      <span class="min-w-0">
+                        <span class="d-block fw-medium text-truncate">{{ nameOf(l.employeeId) }}</span>
+                        <span class="d-block small text-body-secondary text-truncate">{{ deptOf(l.employeeId) }}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ typeLabel(l.type) }}</td>
+                  <td class="text-nowrap">{{ l.startDate | date: 'MMM d' }} – {{ l.endDate | date: 'MMM d' }}</td>
+                  <td>{{ l.days }}</td>
+                  <td class="d-none d-lg-table-cell text-body-secondary small">{{ l.appliedOn | relativeDate }}</td>
+                  <td><app-status-badge [status]="l.status" /></td>
+                  <td class="text-end">
+                    @if (l.status === 'pending') {
+                      <button type="button" class="btn btn-sm btn-outline-primary" (click)="openReview(l)">Review</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+}
+
+<!-- Apply for leave -->
+<app-modal #applyModal title="Request leave" subtitle="Weekends are excluded automatically." [staticBackdrop]="true">
+  <form [formGroup]="applyForm" id="applyForm" (ngSubmit)="submitApply()" novalidate>
+    <div class="mb-3">
+      <span class="form-label d-block">Leave type</span>
+      <div class="row g-2">
+        @for (t of leaveTypes; track t.type) {
+          <div class="col-6 col-sm-4">
+            <input type="radio" class="btn-check" formControlName="type" [value]="t.type" [id]="'lt-' + t.type" />
+            <label class="btn btn-outline-secondary border w-100 text-start leave-type" [for]="'lt-' + t.type">
+              <i class="bi {{ t.icon }} me-1"></i>{{ t.label }}
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6">
+        <label for="lStart" class="form-label">From</label>
+        <input id="lStart" type="date" class="form-control" formControlName="startDate" />
+      </div>
+      <div class="col-6">
+        <label for="lEnd" class="form-label">To</label>
+        <input id="lEnd" type="date" class="form-control" formControlName="endDate" [min]="applyForm.controls.startDate.value" />
+      </div>
+    </div>
+    <div class="d-flex justify-content-between align-items-center p-3 rounded bg-body-tertiary mb-3">
+      <span class="small text-body-secondary">Working days requested</span>
+      <span class="fs-5 fw-semibold">{{ requestedDays() }}</span>
+    </div>
+    @if (selectedBalance(); as b) {
+      <div class="small text-body-secondary mb-3">
+        @if (b.remaining !== null) {
+          You have <strong>{{ b.remaining }}</strong> {{ b.config.label | lowercase }} day(s) available.
+        } @else {
+          {{ b.config.label }} leave has no annual limit.
+        }
+      </div>
+    }
+    @if (applyError()) {
+      <div class="alert alert-warning py-2 small" animate.enter="anim-fade-in"><i class="bi bi-exclamation-triangle me-1"></i>{{ applyError() }}</div>
+    }
+    <div>
+      <label for="lReason" class="form-label">Reason</label>
+      <textarea id="lReason" rows="3" class="form-control" formControlName="reason" placeholder="Briefly describe the reason for your leave"
+                [class.is-invalid]="applyForm.controls.reason.touched && applyForm.controls.reason.invalid"></textarea>
+      <div class="invalid-feedback">Please give a reason (at least 5 characters).</div>
+    </div>
+  </form>
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-light border" (click)="applyModal.close()">Cancel</button>
+    <button type="submit" form="applyForm" class="btn btn-primary" [disabled]="submitting() || !!applyError()">
+      @if (submitting()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      Submit request
+    </button>
+  </ng-container>
+</app-modal>
+
+<!-- Review (reject with note / approve) -->
+<app-modal #reviewModal title="Review leave request">
+  @if (reviewing(); as l) {
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <app-avatar [name]="nameOf(l.employeeId)" />
+      <div>
+        <div class="fw-semibold">{{ nameOf(l.employeeId) }}</div>
+        <div class="small text-body-secondary">{{ typeLabel(l.type) }} · {{ l.days }} day(s) · {{ l.startDate | date: 'MMM d' }} – {{ l.endDate | date: 'MMM d' }}</div>
+      </div>
+    </div>
+    <p class="small p-2 rounded bg-body-tertiary">{{ l.reason }}</p>
+    <label for="rNote" class="form-label">Note to employee <span class="text-body-secondary fw-normal">(optional)</span></label>
+    <textarea id="rNote" rows="3" class="form-control" [value]="reviewNote()" (input)="reviewNote.set($any($event.target).value)"
+              placeholder="Explain your decision"></textarea>
+  }
+  <ng-container modal-footer>
+    @if (reviewing(); as l) {
+      <button type="button" class="btn btn-outline-danger" [disabled]="busyId() === l.id" (click)="decide(l, 'rejected', reviewNote())">Reject</button>
+      <button type="button" class="btn btn-success" [disabled]="busyId() === l.id" (click)="decide(l, 'approved', reviewNote())">Approve</button>
+    }
+  </ng-container>
+</app-modal>
