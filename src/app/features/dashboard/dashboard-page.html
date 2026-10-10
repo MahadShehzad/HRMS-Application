@@ -1,0 +1,317 @@
+<!-- Greeting -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">{{ greeting() }}, {{ firstName() }}</h1>
+    <p class="text-body-secondary mb-0">{{ today | date: 'fullDate' }} · Here's what's happening today.</p>
+  </div>
+  @if (isManager()) {
+    <div class="d-flex flex-wrap gap-2">
+      <a routerLink="/employees/new" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add employee</a>
+      <a routerLink="/leave" [queryParams]="{ tab: 'approvals' }" class="btn btn-outline-secondary border">
+        <i class="bi bi-inbox me-1"></i>Approvals
+        @if (leaves.pending().length) {
+          <span class="badge text-bg-warning ms-1">{{ leaves.pending().length }}</span>
+        }
+      </a>
+    </div>
+  } @else {
+    <a routerLink="/leave" [queryParams]="{ apply: 1 }" class="btn btn-primary align-self-start align-self-md-auto">
+      <i class="bi bi-airplane me-1"></i>Request leave
+    </a>
+  }
+</div>
+
+<!-- Row 1: clock + KPIs -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-5 col-xl-4">
+    <app-clock-card (changed)="onClockChange()" />
+  </div>
+  <div class="col-12 col-lg-7 col-xl-8">
+    <div class="row g-3 h-100">
+      @if (isManager()) {
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Total employees" icon="bi-people" tone="primary" [value]="headcount()"
+                         [loading]="!coreLoaded()" [hint]="newThisMonth() + ' joined this month'" hintIcon="bi-arrow-up-right"
+                         hintClass="text-success-emphasis" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Present today" icon="bi-person-check" tone="success" [value]="presentToday()"
+                         [loading]="!todayRecords() || !coreLoaded()" [hint]="attendanceRate() + '% of workforce clocked in'" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="On leave today" icon="bi-airplane" tone="warning" [value]="outToday().length"
+                         [loading]="!coreLoaded()" [hint]="leaves.pending().length + ' requests awaiting approval'" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Open positions" icon="bi-briefcase" tone="info" [value]="openPositions()"
+                         [loading]="!coreLoaded()" [hint]="'Across ' + openJobs() + ' active job postings'" />
+        </div>
+      } @else {
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Annual leave left" icon="bi-sun" tone="primary" [value]="myAnnualLeft()"
+                         [loading]="!leaves.loaded()" hint="Days remaining this year" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Days present this month" icon="bi-calendar-check" tone="success" [value]="myDaysPresent()"
+                         [loading]="!myMonthRecords()" hint="Including remote days" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Average hours / day" icon="bi-clock-history" tone="info" [value]="myAvgHours()"
+                         [decimals]="1" [loading]="!myMonthRecords()" hint="Target: 8.0 hours" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <app-stat-card label="Last net pay" icon="bi-wallet2" tone="warning" format="currency"
+                         [value]="myLastPayslip()?.net ?? 0" [loading]="!payroll.loaded()"
+                         [hint]="myLastPayslip() ? 'For ' + myLastPayslip()!.period : 'No payslips yet'" />
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (isManager()) {
+  <!-- Row 2: charts -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xl-8">
+      <div class="card h-100">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Attendance rate</h2>
+            <div class="small text-body-secondary">Share of scheduled employees who showed up · last 14 working days</div>
+          </div>
+          <a routerLink="/attendance" class="btn btn-sm btn-outline-secondary border">Details</a>
+        </div>
+        <div class="card-body">
+          @if (trend(); as t) {
+            <app-line-chart [labels]="t.labels" [series]="t.series" [yMax]="100" [height]="260"
+                            [format]="percentFormat" [axisFormat]="percentFormat" ariaLabel="Attendance rate over the last 14 working days" />
+          } @else {
+            <app-skeleton variant="chart" [rows]="14" />
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="card-title">Headcount by department</h2>
+        </div>
+        <div class="card-body">
+          @if (coreLoaded()) {
+            <app-bar-list-chart [data]="byDepartment()" />
+          } @else {
+            <app-skeleton variant="list" [rows]="6" />
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="card-title">Pending approvals</h2>
+          <a routerLink="/leave" [queryParams]="{ tab: 'approvals' }" class="small">View all</a>
+        </div>
+        <div class="card-body p-0">
+          @if (!leaves.loaded()) {
+            <div class="p-3"><app-skeleton variant="list" [rows]="4" /></div>
+          } @else {
+            <ul class="list-group list-group-flush">
+              @for (l of pendingLeaves(); track l.id) {
+                <li class="list-group-item d-flex align-items-center gap-3 py-3" animate.leave="anim-collapse-out">
+                  <app-avatar [name]="nameOf(l.employeeId)" size="sm" />
+                  <div class="min-w-0 flex-grow-1">
+                    <div class="fw-medium text-truncate">{{ nameOf(l.employeeId) }}</div>
+                    <div class="small text-body-secondary text-truncate">
+                      {{ l.type | label }} · {{ l.days }}d · {{ l.startDate | date: 'MMM d' }}
+                    </div>
+                  </div>
+                  <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-success" [disabled]="reviewing() === l.id"
+                            (click)="review(l, 'approved')" aria-label="Approve"><i class="bi bi-check-lg"></i></button>
+                    <button type="button" class="btn btn-outline-danger" [disabled]="reviewing() === l.id"
+                            (click)="review(l, 'rejected')" aria-label="Reject"><i class="bi bi-x-lg"></i></button>
+                  </div>
+                </li>
+              } @empty {
+                <li class="list-group-item border-0">
+                  <app-empty-state icon="bi-check2-all" title="All caught up" message="No leave requests are waiting for review." />
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="card-title">Employment type</h2>
+        </div>
+        <div class="card-body d-flex align-items-center">
+          @if (coreLoaded()) {
+            <app-donut-chart class="w-100" [data]="byType()" centerLabel="Employees" ariaLabel="Employees by employment type" />
+          } @else {
+            <app-skeleton variant="list" [rows]="4" class="w-100" />
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-4">
+      <ng-container *ngTemplateOutlet="celebrationsCard" />
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-lg-8">
+      <ng-container *ngTemplateOutlet="newsCard" />
+    </div>
+    <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Out today</h2>
+          <span class="badge bg-warning-subtle text-warning-emphasis">{{ outToday().length }}</span>
+        </div>
+        <ul class="list-group list-group-flush">
+          @for (l of outToday().slice(0, 5); track l.id) {
+            <li class="list-group-item d-flex align-items-center gap-2">
+              <app-avatar [name]="nameOf(l.employeeId)" size="xs" />
+              <span class="small text-truncate flex-grow-1">{{ nameOf(l.employeeId) }}</span>
+              <span class="small text-body-secondary">until {{ l.endDate | date: 'MMM d' }}</span>
+            </li>
+          } @empty {
+            <li class="list-group-item small text-body-secondary">Everyone is in today.</li>
+          }
+        </ul>
+      </div>
+      <ng-container *ngTemplateOutlet="holidaysCard" />
+    </div>
+  </div>
+} @else {
+  <!-- Employee view -->
+  <div class="row g-3">
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h2 class="card-title">My leave requests</h2>
+          <a routerLink="/leave" class="small">View all</a>
+        </div>
+        <ul class="list-group list-group-flush">
+          @for (l of myLeaves(); track l.id) {
+            <li class="list-group-item d-flex align-items-center gap-3 py-3">
+              <div class="icon-box icon-box-sm bg-primary-subtle text-primary-emphasis"><i class="bi bi-calendar-event"></i></div>
+              <div class="min-w-0 flex-grow-1">
+                <div class="fw-medium">{{ l.type | label }} leave · {{ l.days }} day(s)</div>
+                <div class="small text-body-secondary">{{ l.startDate | date: 'MMM d' }} – {{ l.endDate | date: 'MMM d, y' }}</div>
+              </div>
+              <app-status-badge [status]="l.status" />
+            </li>
+          } @empty {
+            <li class="list-group-item border-0">
+              <app-empty-state icon="bi-airplane" title="No leave requests" message="Plan some time off — you've earned it." />
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <ng-container *ngTemplateOutlet="newsCard" />
+    </div>
+    <div class="col-12 col-lg-6">
+      <ng-container *ngTemplateOutlet="holidaysCard" />
+    </div>
+    <div class="col-12 col-lg-6">
+      <ng-container *ngTemplateOutlet="celebrationsCard" />
+    </div>
+  </div>
+}
+
+<!-- ===== Reusable cards ===== -->
+<ng-template #newsCard>
+  <div class="card h-100">
+    <div class="card-header">
+      <h2 class="card-title">Announcements</h2>
+      <a routerLink="/company" class="small">View all</a>
+    </div>
+    <div class="card-body">
+      @if (!announcements.loaded()) {
+        <app-skeleton variant="list" [rows]="3" />
+      }
+      @for (a of latestNews(); track a.id; let last = $last) {
+        <article class="d-flex gap-3" [class.mb-3]="!last" [class.pb-3]="!last" [class.border-bottom]="!last">
+          <div class="icon-box icon-box-sm rounded-circle"
+               [class]="a.category === 'urgent' ? 'bg-danger-subtle text-danger-emphasis' : 'bg-primary-subtle text-primary-emphasis'">
+            <i class="bi" [class]="a.pinned ? 'bi-pin-angle' : 'bi-megaphone'"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <h3 class="h6 mb-0">{{ a.title }}</h3>
+              <app-status-badge [status]="a.category" />
+            </div>
+            <p class="small text-body-secondary mb-1 text-truncate-2">{{ a.body }}</p>
+            <div class="fs-xs text-body-tertiary">{{ nameOf(a.authorId) }} · {{ a.publishedOn | relativeDate }}</div>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #holidaysCard>
+  <div class="card h-100">
+    <div class="card-header">
+      <h2 class="card-title">Upcoming holidays</h2>
+    </div>
+    <ul class="list-group list-group-flush">
+      @for (h of upcomingHolidays(); track h.id) {
+        <li class="list-group-item d-flex align-items-center gap-3">
+          <div class="date-chip">
+            <span>{{ h.date | date: 'MMM' }}</span>
+            <strong>{{ h.date | date: 'd' }}</strong>
+          </div>
+          <div class="min-w-0 flex-grow-1">
+            <div class="fw-medium text-truncate">{{ h.name }}</div>
+            <div class="small text-body-secondary">{{ h.date | date: 'EEEE' }} · {{ h.date | relativeDate }}</div>
+          </div>
+          @if (h.type === 'optional') {
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">Optional</span>
+          }
+        </li>
+      } @empty {
+        <li class="list-group-item small text-body-secondary">No upcoming holidays.</li>
+      }
+    </ul>
+  </div>
+</ng-template>
+
+<ng-template #celebrationsCard>
+  <div class="card h-100">
+    <div class="card-header">
+      <h2 class="card-title">Celebrations</h2>
+      <span class="small text-body-secondary">Next 30 days</span>
+    </div>
+    <ul class="list-group list-group-flush">
+      @for (c of celebrations(); track c.id + c.kind) {
+        <li class="list-group-item d-flex align-items-center gap-3">
+          <app-avatar [name]="c.name" size="sm" />
+          <div class="min-w-0 flex-grow-1">
+            <a [routerLink]="['/employees', c.id]" class="fw-medium text-body text-truncate d-block">{{ c.name }}</a>
+            <div class="small text-body-secondary">
+              @if (c.kind === 'birthday') {
+                <i class="bi bi-cake2 me-1"></i>Birthday
+              } @else {
+                <i class="bi bi-award me-1"></i>{{ c.years }} year{{ c.years > 1 ? 's' : '' }} at the company
+              }
+            </div>
+          </div>
+          <span class="badge rounded-pill" [class]="c.inDays === 0 ? 'text-bg-primary' : 'bg-body-secondary text-body-secondary'">
+            {{ c.inDays === 0 ? 'Today' : 'in ' + c.inDays + 'd' }}
+          </span>
+        </li>
+      } @empty {
+        <li class="list-group-item small text-body-secondary">No celebrations coming up.</li>
+      }
+    </ul>
+  </div>
+</ng-template>
